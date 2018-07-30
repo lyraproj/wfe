@@ -1,12 +1,8 @@
 package fsm
 
 import (
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-evaluator/utils"
+	"github.com/puppetlabs/go-fsm/fsmpb"
 	"github.com/puppetlabs/go-issues/issue"
-	"gonum.org/v1/gonum/graph"
-	"io"
 	"reflect"
 	"runtime"
 )
@@ -14,175 +10,98 @@ import (
 type Action interface {
 	issue.Named
 
-	Call(Genesis, []reflect.Value) (map[string]reflect.Value, error)
+	Call(Context, map[string]reflect.Value) map[string]reflect.Value
 
-	Consumes() []*Parameter
+	Consumes() []*fsmpb.Parameter
 
-	Produces() []*Parameter
+	Produces() []*fsmpb.Parameter
 }
 
-type ServerAction interface {
-	Action
-	graph.Node
-	eval.PuppetObject
-
-	SetResolved()
-
-	// Resolved channel will be closed when the action is resolved
-	Resolved() <-chan bool
-}
-
-var genesisType = reflect.TypeOf([]Genesis{}).Elem()
+var contextType = reflect.TypeOf([]Context{}).Elem()
 var errorType = reflect.TypeOf([]error{}).Elem()
+var noParams = make([]*fsmpb.Parameter, 0)
 
-func NewGoAction(c eval.Context, name string, function interface{}, paramNames []string) Action {
+func NewGoAction(name string, function interface{}) Action {
 	ar := reflect.TypeOf(function)
 	if ar.Kind() != reflect.Func {
 		_, file, line, _ := runtime.Caller(1)
 		panic(issue.NewReported(`GENESIS_ACTION_NOT_FUNCTION`, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: ar.String()}, issue.NewLocation(file, line, 0)))
 	}
 
-	paramc := len(paramNames)
+	inc := ar.NumIn()
+	if ar.IsVariadic() || inc == 0 || inc > 2 || !ar.In(0).AssignableTo(contextType) {
+		panic(badActionFunction(name, ar))
+	}
+
 	outc := ar.NumOut()
-	if ar.IsVariadic() || !(ar.NumIn() - 1 == paramc && (outc == 1 && ar.Out(0).AssignableTo(errorType) || outc == 2 && ar.Out(1).AssignableTo(errorType) && ar.In(0).AssignableTo(genesisType))) {
-		panic(badActionFunction(name, paramc, ar))
+	if !(outc == 1 && ar.Out(0).AssignableTo(errorType) || outc == 2 && ar.Out(1).AssignableTo(errorType)) {
+		panic(badActionFunction(name, ar))
 	}
 
-	var produces []*Parameter
+	consumes := noParams
+	if inc == 2 {
+		consumes = reflectStruct(name, ar, ar.In(1))
+	}
+
+	produces := noParams
 	if outc == 2 {
-		retType := ar.Out(0)
-		if retType.Kind() != reflect.Ptr {
-			panic(badActionFunction(name, paramc, ar))
-		}
-
-		retType = retType.Elem()
-		if retType.Kind() != reflect.Struct {
-			panic(badActionFunction(name, paramc, ar))
-		}
-
-		outCount := retType.NumField()
-		produces = make([]*Parameter, outCount)
-		for i := 0; i < outCount; i++ {
-			fld := retType.Field(i)
-			produces[i] = NewParameter(name+`.`+utils.CamelToSnakeCase(fld.Name), eval.WrapType(c, fld.Type))
-		}
-	} else {
-		produces = []*Parameter{}
-	}
-
-	consumes := make([]*Parameter, paramc)
-	for i, n := range paramNames {
-		consumes[i] = NewParameter(n, eval.WrapType(nil, ar.In(i+1)))
+		produces = reflectStruct(name, ar, ar.Out(0))
 	}
 	return NewAction(name, NewGoActionCall(function), consumes, produces)
 }
 
-func badActionFunction(name string, paramc int, typ reflect.Type) error {
+func reflectStruct(name string, funcType, s reflect.Type) []*fsmpb.Parameter {
+	if s.Kind() != reflect.Ptr {
+		panic(badActionFunction(name, funcType))
+	}
+
+	s = s.Elem()
+	if s.Kind() != reflect.Struct {
+		panic(badActionFunction(name, funcType))
+	}
+	outCount := s.NumField()
+	params := make([]*fsmpb.Parameter, outCount)
+	for i := 0; i < outCount; i++ {
+		fld := s.Field(i)
+		params[i] = &fsmpb.Parameter{Name: issue.CamelToSnakeCase(fld.Name), Type: fld.Type.String()}
+	}
+	return params
+}
+
+func badActionFunction(name string, typ reflect.Type) error {
 	_, file, line, _ := runtime.Caller(2)
-	return issue.NewReported(`GENESIS_ACTION_BAD_FUNCTION`, issue.SEVERITY_ERROR, issue.H{`name`: name, `param_count`: paramc, `type`: typ.String()}, issue.NewLocation(file, line, 0))
+	return issue.NewReported(`GENESIS_ACTION_BAD_FUNCTION`, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: typ.String()}, issue.NewLocation(file, line, 0))
 }
 
-type Parameter struct {
-	name string
-	typ eval.PType
-}
-
-func (p *Parameter) Name() string {
-	return p.name
-}
-
-func (p *Parameter) Type() eval.PType {
-	return p.typ
-}
-
-func NewParameter(name string, typ eval.PType) *Parameter {
-	return &Parameter{name, typ}
-}
-
-type BasicAction struct {
+type action struct {
 	name     string
-	consumes []*Parameter
-	produces []*Parameter
+	consumes []*fsmpb.Parameter
+	produces []*fsmpb.Parameter
 	function ActionFunction
 }
 
-type serverAction struct {
-	Action
-	graph.Node
-	resolved chan bool
+func NewAction(name string, function ActionFunction, consumes, produces []*fsmpb.Parameter) Action {
+	return &action{name, consumes, produces, function}
 }
 
-func NewAction(name string, function ActionFunction, consumes, produces []*Parameter) Action {
-	return &BasicAction{name, consumes, produces, function}
-}
-
-func (a *BasicAction) Consumes() []*Parameter {
+func (a *action) Consumes() []*fsmpb.Parameter {
 	return a.consumes
 }
 
-func (a *BasicAction) Produces() []*Parameter {
+func (a *action) Produces() []*fsmpb.Parameter {
 	return a.produces
 }
 
-func (a *BasicAction) Name() string {
+func (a *action) Name() string {
 	return a.name
 }
 
-func (a *BasicAction) Call(g Genesis, args []reflect.Value) (map[string]reflect.Value, error) {
+func (a *action) Call(g Context, args map[string]reflect.Value) map[string]reflect.Value {
 	return a.function.Call(g, a, args)
 }
 
-func (a *serverAction) SetResolved() {
-	close(a.resolved)
-}
-
-func (a *serverAction) Get(c eval.Context, key string) (value eval.PValue, ok bool) {
-	switch key {
-	case `name`:
-		return types.WrapString(a.Name()), true
-	case `id`:
-		return types.WrapInteger(a.ID()), true
-	default:
-		return nil, false
-	}
-}
-
-func (a *serverAction) Resolved() <-chan bool {
-	return a.resolved
-}
-
-func (a *serverAction) InitHash() eval.KeyedValue {
-	return types.SingletonHash2(`name`, types.WrapString(a.Name()))
-}
-
-var actionType eval.ObjectType
-
-func init() {
-	actionType = eval.NewObjectType(`Genesis::Action`, `{
-		attributes => {
-      name => String
-    },
-  }`)
-}
-
-func (a *serverAction) String() string {
-	return eval.ToString(a)
-}
-
-func (a *serverAction) Equals(other interface{}, guard eval.Guard) bool {
-	return a == other
-}
-
-func (a *serverAction) ToString(bld io.Writer, format eval.FormatContext, g eval.RDetect) {
-	types.ObjectToString(a, format, bld, g)
-}
-
-func (a *serverAction) Type() eval.PType {
-	return actionType
-}
-
 type ActionFunction interface {
-	Call(g Genesis, a Action, args []reflect.Value) (map[string]reflect.Value, error)
+	Call(g Context, a Action, args map[string]reflect.Value) map[string]reflect.Value
 }
 
 type goActionCall struct {
@@ -193,28 +112,42 @@ func NewGoActionCall(f interface{}) ActionFunction {
 	return &goActionCall{f}
 }
 
-func (ga *goActionCall) Call(g Genesis, a Action, args []reflect.Value) (map[string]reflect.Value, error) {
+func (ga *goActionCall) Call(g Context, a Action, args map[string]reflect.Value) map[string]reflect.Value {
 	fv := reflect.ValueOf(ga.function)
-	result := fv.Call(append([]reflect.Value{reflect.ValueOf(g)}, args...))
+	fvType := fv.Type()
+
+	params := make([]reflect.Value, 0, 2)
+	params = append(params, reflect.ValueOf(g))
+	if fvType.NumIn() > 1 {
+		inType := fvType.In(1).Elem()
+		in := reflect.New(inType).Elem()
+		t := in.NumField()
+		for i := 0; i < t; i++ {
+			pn := inType.Field(i).Name
+			in.Field(i).Set(args[issue.CamelToSnakeCase(pn)])
+		}
+		params = append(params, in.Addr())
+	}
+	result := fv.Call(params)
 	expCount := 1
 	if len(a.Produces()) > 1 {
 		expCount++
 	}
 	rn := len(result)
 	if rn != expCount {
-		return nil, issue.NewReported(GENESIS_ACTION_BAD_RETURN_COUNT, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `expected_count`: expCount, `actual_count`: rn}, nil)
+		panic(issue.NewReported(GENESIS_ACTION_BAD_RETURN_COUNT, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `expected_count`: expCount, `actual_count`: rn}, nil))
 	}
 
 	if rn == 1 {
 		if err := result[0].Interface(); err != nil {
-			return nil, err.(error)
+			panic(err)
 		}
-		return nil, nil
+		return map[string]reflect.Value{}
 	}
 
 	err := result[1].Interface()
 	if err != nil {
-		return nil, err.(error)
+		panic(err)
 	}
 
 	rs := result[0]
@@ -224,19 +157,19 @@ func (ga *goActionCall) Call(g Genesis, a Action, args []reflect.Value) (map[str
 		rs = rs.Elem()
 	}
 	if rt.Kind() != reflect.Struct {
-		return nil, issue.NewReported(GENESIS_ACTION_BAD_RETURN, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `type`: rt.String()}, nil)
+		panic(issue.NewReported(GENESIS_ACTION_BAD_RETURN, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `type`: rt.String()}, nil))
 	}
 	fcnt := rt.NumField()
 	rmap := make(map[string]reflect.Value, fcnt)
 	for i := 0; i < fcnt; i++ {
 		ft := rt.Field(i)
 		v := rs.Field(i)
-		n := a.Name() + `.` + utils.CamelToSnakeCase(ft.Name)
+		n := issue.CamelToSnakeCase(ft.Name)
 		if v.IsValid() {
 			rmap[n] = v
 		} else {
 			rmap[n] = reflect.Zero(ft.Type)
 		}
 	}
-	return rmap, nil
+	return rmap
 }

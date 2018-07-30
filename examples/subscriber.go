@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/nats-io/go-nats"
-	"github.com/puppetlabs/go-evaluator/serialization"
 	"github.com/golang/protobuf/proto"
+	"github.com/nats-io/go-nats"
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/data-protobuf/misc"
+	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-evaluator/serialization"
 	"runtime"
 
 	// Ensure initialization of pcore
@@ -32,4 +32,3 @@ func main() {
 	})
 	runtime.Goexit()
 }
-

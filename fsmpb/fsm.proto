@@ -3,13 +3,12 @@ package puppet.fsm;
 
 import "datapb/data.proto";
 
-option go_package = "github.com/puppetlabs/data-protobuf/fsm/fsmpb";
+option go_package = "github.com/puppetlabs/go-fsm/fsmpb";
 
-message ActorRequest {
-  string name = 1;
+message ActionsRequest {
 }
 
-message ActorResponse {
+message ActionsResponse {
   repeated Action actions = 1;
 }
 
@@ -31,7 +30,7 @@ message Action {
 }
 
 service Actor {
-  rpc GetActor (ActorRequest) returns (ActorResponse) {};
+  rpc GetActions (ActionsRequest) returns (ActionsResponse) {};
 
   rpc InvokeAction (ActionInvocation) returns (puppet.datapb.DataHash) {};
 }

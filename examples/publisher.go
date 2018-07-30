@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/go-nats"
+	"github.com/puppetlabs/data-protobuf/misc"
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/serialization"
 	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/data-protobuf/misc"
 	// Ensure initialization of pcore
 	_ "github.com/puppetlabs/go-evaluator/pcore"
 	"github.com/puppetlabs/go-semver/semver"
