@@ -13,8 +13,9 @@ message ActionsResponse {
 }
 
 message ActionInvocation {
-  int64 id = 1;
-  puppet.datapb.DataHash arguments = 2;
+  uint32 genesis = 1;
+  int64 id = 2;
+  puppet.datapb.DataHash arguments = 3;
 }
 
 message Parameter {
@@ -27,6 +28,10 @@ message Action {
   string name = 2;
   repeated Parameter consumes = 3;
   repeated Parameter produces = 4;
+}
+
+service Genesis {
+  rpc apply(puppet.datapb.DataHash) returns (puppet.datapb.DataHash) {};
 }
 
 service Actor {
