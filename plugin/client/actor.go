@@ -12,7 +12,7 @@ import (
 	"os"
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/go-fsm/plugin/shared"
-	"github.com/hashicorp/go-plugin/examples/bidirectional/proto"
+	"github.com/puppetlabs/go-fsm/api"
 )
 
 type Actor struct {
@@ -31,7 +31,7 @@ func (a *Actor) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 }
 
 func (a *Actor) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &GRPCActor{ctx, fsmpb.NewActorClient(c)}, nil
+	return &GRPCActor{ctx, broker, fsmpb.NewActorClient(c)}, nil
 }
 
 func RunActions(client *plugin.Client) {
@@ -79,7 +79,7 @@ func (c *GRPCActor) GetActions() []*fsmpb.Action {
 	return resp.Actions
 }
 
-func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis *shared.PbGenesis) *datapb.DataHash {
+func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.Genesis) *datapb.DataHash {
 	genesisServer := &GRPCGenesis{impl: NewGenesis(c.ctx, genesis)}
 	var s *grpc.Server
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {

@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/puppetlabs/go-fsm/api"
 )
 
 func ExampleActorServer_Action() {
@@ -35,19 +36,19 @@ func ExampleActorServer_Action() {
 
 	// Run actions in process by adding actions directly to the actor server
 	as := NewActorServer(context.Background())
-	as.Action("a", func(g ActorServer) (*OutA, error) {
+	as.Action("a", func(s api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
 	})
 
-	as.Action("b1", func(g ActorServer, in *InB) (*OutB1, error) {
+	as.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
 		return &OutB1{in.A + ` world`, in.B + 4}, nil
 	})
 
-	as.Action("b2", func(g ActorServer, in *InB) (*OutB2, error) {
+	as.Action("b2", func(g api.Genesis, in *InB) (*OutB2, error) {
 		return &OutB2{in.A + ` earth`, in.B + 8}, nil
 	})
 
-	as.Action("c", func(g ActorServer, in *InC) error {
+	as.Action("c", func(g api.Genesis, in *InC) error {
 		fmt.Printf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)
 		return nil
 	})

@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"net/rpc"
 	"github.com/puppetlabs/data-protobuf/datapb"
+	"reflect"
 )
 
 type Genesis struct {
@@ -30,14 +31,22 @@ func (a *Genesis) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *
 }
 
 type GRPCGenesis struct {
-	ctx    context.Context
+	context.Context
 	client fsmpb.GenesisClient
 }
 
-func (c *GRPCGenesis) Apply(resources *datapb.DataHash) *datapb.DataHash {
-	resp, err := c.client.Apply(c.ctx, resources)
+func (c *GRPCGenesis) Apply(resources map[string]reflect.Value) map[string]reflect.Value {
+	rh, err := datapb.ToDataHash(resources)
 	if err != nil {
 		panic(err)
 	}
-	return resp
+	resp, err := c.client.Apply(c, rh)
+	if err != nil {
+		panic(err)
+	}
+	vh, err := datapb.FromDataHash(resp)
+	if err != nil {
+		panic(err)
+	}
+	return vh
 }

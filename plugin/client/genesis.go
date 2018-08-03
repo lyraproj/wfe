@@ -8,37 +8,37 @@ import (
 	"google.golang.org/grpc"
 	"net/rpc"
 	"github.com/puppetlabs/data-protobuf/datapb"
-	"github.com/puppetlabs/go-fsm/plugin/shared"
+	"github.com/puppetlabs/go-fsm/api"
 )
 
 type Genesis struct {
 	context.Context
-	impl shared.PbGenesis
+	impl api.Genesis
 }
 
-func NewGenesis(ctx context.Context, impl shared.PbGenesis) *Genesis {
+func NewGenesis(ctx context.Context, impl api.Genesis) *Genesis {
 	return &Genesis{ctx, impl}
 }
 
-func (s *Genesis) Apply(resources *datapb.DataHash) *datapb.DataHash {
+func (g *Genesis) Apply(resources *datapb.DataHash) *datapb.DataHash {
 	return nil
 }
 
-func (a *Genesis) Server(*plugin.MuxBroker) (interface{}, error) {
-	return nil, fmt.Errorf(`%T has no server implementation for rpc`, a)
+func (g *Genesis) Server(*plugin.MuxBroker) (interface{}, error) {
+	return nil, fmt.Errorf(`%T has no server implementation for rpc`, g)
 }
 
-func (a *Genesis) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
-	return nil, fmt.Errorf(`%T has no client implementation for rpc`, a)
+func (g *Genesis) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
+	return nil, fmt.Errorf(`%T has no client implementation for rpc`, g)
 }
 
-func (a *Genesis) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	fsmpb.RegisterGenesisServer(s, &GRPCGenesis{impl: a})
+func (g *Genesis) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+	fsmpb.RegisterGenesisServer(s, &GRPCGenesis{impl: g})
 	return nil
 }
 
-func (a *Genesis) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return nil, fmt.Errorf(`%T has no client implementation for grpc`, a)
+func (g *Genesis) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	return nil, fmt.Errorf(`%T has no client implementation for grpc`, g)
 }
 
 type GRPCGenesis struct {

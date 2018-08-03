@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"reflect"
 )
 
@@ -12,7 +11,7 @@ type Action interface {
 
 	Produces() []Parameter
 
-	Call(context.Context, map[string]reflect.Value) map[string]reflect.Value
+	Call(Genesis, map[string]reflect.Value) map[string]reflect.Value
 }
 
 type action struct {
@@ -23,7 +22,7 @@ type action struct {
 }
 
 type ActionFunction interface {
-	Call(g context.Context, a Action, args map[string]reflect.Value) map[string]reflect.Value
+	Call(Genesis, Action, map[string]reflect.Value) map[string]reflect.Value
 }
 
 func NewAction(name string, function ActionFunction, consumes, produces []Parameter) Action {
@@ -42,6 +41,6 @@ func (a *action) Name() string {
 	return a.name
 }
 
-func (a *action) Call(g context.Context, args map[string]reflect.Value) map[string]reflect.Value {
+func (a *action) Call(g Genesis, args map[string]reflect.Value) map[string]reflect.Value {
 	return a.function.Call(g, a, args)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/puppetlabs/go-fsm/test/common"
 	"github.com/puppetlabs/go-fsm/plugin/server"
+	"github.com/puppetlabs/go-fsm/api"
 )
 
 type OutA struct {
@@ -38,19 +39,19 @@ type InC struct {
 func main() {
 	actor := server.NewActor(context.Background())
 
-	actor.Action("a", func(g context.Context) (*OutA, error) {
+	actor.Action("a", func(g api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
 	})
 
-	actor.Action("b1", func(g context.Context, in *InB) (*OutB1, error) {
+	actor.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
 		return &OutB1{in.A + ` world`, in.B + 4}, nil
 	})
 
-	actor.Action("b2", func(g context.Context, in *InB) (*OutB2, error) {
+	actor.Action("b2", func(g api.Genesis, in *InB) (*OutB2, error) {
 		return &OutB2{in.A + ` earth`, in.B + 8}, nil
 	})
 
-	actor.Action("c", func(g context.Context, in *InC) error {
+	actor.Action("c", func(g api.Genesis, in *InC) error {
 		fmt.Printf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)
 		return nil
 	})

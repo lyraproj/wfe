@@ -67,7 +67,7 @@ func badActionFunction(name string, typ reflect.Type) error {
 	return issue.NewReported(GENESIS_ACTION_BAD_FUNCTION, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: typ.String()}, issue.NewLocation(file, line, 0))
 }
 
-func (ga *goActionCall) Call(g context.Context, a Action, args map[string]reflect.Value) map[string]reflect.Value {
+func (ga *goActionCall) Call(g Genesis, a Action, args map[string]reflect.Value) map[string]reflect.Value {
 	fv := reflect.ValueOf(ga.function)
 	fvType := fv.Type()
 

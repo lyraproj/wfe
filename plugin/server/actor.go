@@ -29,7 +29,7 @@ func (a *Actor) GetActions() []*fsmpb.Action {
 	return convertToPbActions(a.actions)
 }
 
-func (a *Actor) InvokeAction(id int64, parameters *datapb.DataHash) *datapb.DataHash {
+func (a *Actor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.Genesis) *datapb.DataHash {
 	if id < 0 || int(id) >= len(a.actions) {
 		panic(fmt.Errorf("no action with ID %d", id))
 	}
@@ -43,7 +43,7 @@ func (a *Actor) InvokeAction(id int64, parameters *datapb.DataHash) *datapb.Data
 		}
 		rm[p.Key] = arg
 	}
-	cr := a.actions[id].Call(a, rm)
+	cr := a.actions[id].Call(genesis, rm)
 	ep = make([]*datapb.DataEntry, 0, len(cr))
 	for k, v := range cr {
 		rv, err := datapb.ToData(v)
@@ -80,7 +80,7 @@ func (a *Actor) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
 }
 
 func (a *Actor) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	fsmpb.RegisterActorServer(s, &GRPCServer{impl: a})
+	fsmpb.RegisterActorServer(s, &GRPCServer{broker: broker, impl: a})
 	return nil
 }
 
@@ -89,6 +89,7 @@ func (a *Actor) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *gr
 }
 
 type GRPCServer struct {
+	broker *plugin.GRPCBroker
 	impl *Actor
 }
 
@@ -97,5 +98,13 @@ func (s *GRPCServer) GetActions(ctx context.Context, ar *fsmpb.ActionsRequest) (
 }
 
 func (s *GRPCServer) InvokeAction(ctx context.Context, in *fsmpb.ActionInvocation) (*datapb.DataHash, error) {
-	return s.impl.InvokeAction(in.Id, in.Arguments), nil
+	conn, err := s.broker.Dial(in.Genesis)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	a := &GRPCGenesis{ctx, fsmpb.NewGenesisClient(conn)}
+
+	return s.impl.InvokeAction(in.Id, in.Arguments, a), nil
 }
