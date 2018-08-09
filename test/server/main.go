@@ -7,6 +7,7 @@ import (
 	"github.com/puppetlabs/go-fsm/test/common"
 	"github.com/puppetlabs/go-fsm/plugin/server"
 	"github.com/puppetlabs/go-fsm/api"
+	"reflect"
 )
 
 type OutA struct {
@@ -44,7 +45,8 @@ func main() {
 	})
 
 	actor.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
-		return &OutB1{in.A + ` world`, in.B + 4}, nil
+		vs := g.Apply(map[string]reflect.Value{`a`: reflect.ValueOf(in.A + ` world`), `b`: reflect.ValueOf(in.B + 5)})
+		return &OutB1{vs[`a`].String(), vs[`b`].Int()}, nil
 	})
 
 	actor.Action("b2", func(g api.Genesis, in *InB) (*OutB2, error) {

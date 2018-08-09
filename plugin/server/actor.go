@@ -10,6 +10,7 @@ import (
 	"net/rpc"
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"reflect"
+	"io"
 )
 
 type Actor struct {
@@ -80,7 +81,7 @@ func (a *Actor) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
 }
 
 func (a *Actor) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	fsmpb.RegisterActorServer(s, &GRPCServer{broker: broker, impl: a})
+	fsmpb.RegisterActorServer(s, &GRPCServer{impl: a})
 	return nil
 }
 
@@ -89,7 +90,6 @@ func (a *Actor) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *gr
 }
 
 type GRPCServer struct {
-	broker *plugin.GRPCBroker
 	impl *Actor
 }
 
@@ -97,14 +97,18 @@ func (s *GRPCServer) GetActions(ctx context.Context, ar *fsmpb.ActionsRequest) (
 	return &fsmpb.ActionsResponse{Actions: s.impl.GetActions()}, nil
 }
 
-func (s *GRPCServer) InvokeAction(ctx context.Context, in *fsmpb.ActionInvocation) (*datapb.DataHash, error) {
-	conn, err := s.broker.Dial(in.Genesis)
-	if err != nil {
-		return nil, err
+func (s *GRPCServer) InvokeAction(stream fsmpb.Actor_InvokeActionServer) error {
+	for {
+		in, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		err = stream.Send(&fsmpb.ActionMessage{in.Id, s.impl.InvokeAction(in.Id, in.Arguments, NewGenesis(stream))})
+		if err != nil {
+			return err
+		}
 	}
-	defer conn.Close()
-
-	a := &GRPCGenesis{ctx, fsmpb.NewGenesisClient(conn)}
-
-	return s.impl.InvokeAction(in.Id, in.Arguments, a), nil
 }

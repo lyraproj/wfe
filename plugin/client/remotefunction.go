@@ -3,17 +3,16 @@ package client
 import (
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-fsm/plugin/shared"
 	"reflect"
 	"github.com/puppetlabs/go-fsm/fsmpb"
 )
 
 type remoteFunction struct {
-	actor shared.PbActor
+	actor *GRPCActor
 	id    int64
 }
 
-func NewRemoteAction(actor shared.PbActor, action *fsmpb.Action) api.Action {
+func NewRemoteAction(actor *GRPCActor, action *fsmpb.Action) api.Action {
 	return api.NewAction(action.Name, &remoteFunction{actor, action.Id}, convertFromPbParams(action.Consumes), convertFromPbParams(action.Produces))
 }
 
@@ -22,7 +21,11 @@ func (pf *remoteFunction) Call(g api.Genesis, a api.Action, args map[string]refl
 	if err != nil {
 		panic(err)
 	}
-	vh, err := datapb.FromDataHash(pf.actor.InvokeAction(pf.id, dh, g))
+	dh, err = pf.actor.InvokeAction(pf.id, dh, g)
+	if err != nil {
+		panic(err)
+	}
+	vh, err := datapb.FromDataHash(dh)
 	if err != nil {
 		panic(err)
 	}

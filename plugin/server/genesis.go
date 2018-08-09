@@ -2,37 +2,21 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"github.com/hashicorp/go-plugin"
 	"github.com/puppetlabs/go-fsm/fsmpb"
-	"google.golang.org/grpc"
-	"net/rpc"
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"reflect"
+	"github.com/puppetlabs/go-fsm/api"
+	"github.com/puppetlabs/go-fsm/plugin/shared"
+	"fmt"
 )
-
-type Genesis struct {
-}
-
-func (a *Genesis) Server(*plugin.MuxBroker) (interface{}, error) {
-	return nil, fmt.Errorf(`%T has no server implementation for rpc`, a)
-}
-
-func (a *Genesis) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
-	return nil, fmt.Errorf(`%T has no client implementation for rpc`, a)
-}
-
-func (a *Genesis) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	return fmt.Errorf(`%T has no server implementation for grpc`, a)
-}
-
-func (a *Genesis) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &GRPCGenesis{ctx, fsmpb.NewGenesisClient(c)}, nil
-}
 
 type GRPCGenesis struct {
 	context.Context
-	client fsmpb.GenesisClient
+	stream fsmpb.Actor_InvokeActionServer
+}
+
+func NewGenesis(stream fsmpb.Actor_InvokeActionServer) api.Genesis {
+	return &GRPCGenesis{stream.Context(), stream}
 }
 
 func (c *GRPCGenesis) Apply(resources map[string]reflect.Value) map[string]reflect.Value {
@@ -40,11 +24,26 @@ func (c *GRPCGenesis) Apply(resources map[string]reflect.Value) map[string]refle
 	if err != nil {
 		panic(err)
 	}
-	resp, err := c.client.Apply(c, rh)
+
+	if err := c.stream.Send(&fsmpb.ActionMessage{shared.GenesisServiceId, rh}); err != nil {
+		panic(err)
+	}
+
+	resp, err := c.stream.Recv()
+	if err != nil {
+		// Even EOF is an error here
+		panic(err)
+	}
+
 	if err != nil {
 		panic(err)
 	}
-	vh, err := datapb.FromDataHash(resp)
+
+	if resp.Id != shared.GenesisServiceId {
+		panic(fmt.Errorf("expected reply with id %d, got %d", shared.GenesisServiceId, resp.Id))
+	}
+
+	vh, err := datapb.FromDataHash(resp.GetArguments())
 	if err != nil {
 		panic(err)
 	}

@@ -15,6 +15,6 @@ func NewGenesis(ctx context.Context) api.Genesis {
 }
 
 func (g *genesis) Apply(resources map[string]reflect.Value) map[string]reflect.Value {
-	panic("implement me")
+	return resources;
 }
 

@@ -11,8 +11,8 @@ import (
 	"net/rpc"
 	"os"
 	"github.com/puppetlabs/data-protobuf/datapb"
-	"github.com/puppetlabs/go-fsm/plugin/shared"
 	"github.com/puppetlabs/go-fsm/api"
+	"github.com/puppetlabs/go-fsm/plugin/shared"
 )
 
 type Actor struct {
@@ -49,7 +49,7 @@ func RunActions(client *plugin.Client) {
 		os.Exit(1)
 	}
 
-	actor := raw.(shared.PbActor)
+	actor := raw.(*GRPCActor)
 	ctx := context.Background()
 	actions := actor.GetActions()
 	if err != nil {
@@ -79,23 +79,39 @@ func (c *GRPCActor) GetActions() []*fsmpb.Action {
 	return resp.Actions
 }
 
-func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.Genesis) *datapb.DataHash {
-	genesisServer := &GRPCGenesis{impl: NewGenesis(c.ctx, genesis)}
-	var s *grpc.Server
-	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
-		s = grpc.NewServer(opts...)
-		fsmpb.RegisterGenesisServer(s, genesisServer)
-		return s
-	}
-
-	brokerID := c.broker.NextId()
-	go c.broker.AcceptAndServe(brokerID, serverFunc)
-
-	resp, err := c.client.InvokeAction(c.ctx, &fsmpb.ActionInvocation{Genesis: brokerID, Id: id, Arguments: parameters})
+func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.Genesis) (*datapb.DataHash, error) {
+	stream, err := c.client.InvokeAction(c.ctx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	s.Stop()
-	return resp
+	err = stream.Send(&fsmpb.ActionMessage{Id: id, Arguments: parameters})
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			// Even EOF is an error here
+			return nil, err
+		}
+		switch resp.Id {
+		case id:
+			// This is the response for the InvokeAction call
+			stream.CloseSend()
+			return resp.Arguments, nil
+
+		case shared.GenesisServiceId:
+			// Message intended for the Genesis service
+			oh, err := datapb.FromDataHash(resp.Arguments)
+			if err != nil {
+				return nil, err
+			}
+			dh, err := datapb.ToDataHash(genesis.Apply(oh))
+			if err != nil {
+				return nil, err
+			}
+			stream.Send(&fsmpb.ActionMessage{shared.GenesisServiceId, dh})
+
+		default:
+			return nil, fmt.Errorf("unexpected response id in ActionMessage: %d", resp.Id)
+		}
+	}
 }
