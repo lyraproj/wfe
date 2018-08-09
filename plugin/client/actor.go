@@ -98,7 +98,7 @@ func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis 
 			stream.CloseSend()
 			return resp.Arguments, nil
 
-		case shared.GenesisServiceId:
+		case shared.GenesisApplyId:
 			// Message intended for the Genesis service
 			oh, err := datapb.FromDataHash(resp.Arguments)
 			if err != nil {
@@ -108,7 +108,31 @@ func (c *GRPCActor) InvokeAction(id int64, parameters *datapb.DataHash, genesis 
 			if err != nil {
 				return nil, err
 			}
-			stream.Send(&fsmpb.ActionMessage{shared.GenesisServiceId, dh})
+			stream.Send(&fsmpb.ActionMessage{resp.Id, dh})
+
+		case shared.GenesisLookupId:
+			oh, err := datapb.FromDataHash(resp.Arguments)
+			if err != nil {
+				return nil, err
+			}
+			vkeys := oh[`keys`]
+			t := vkeys.Len()
+			keys := make([]string, t)
+			for i := 0; i < t; i++ {
+				keys[i] = vkeys.Index(i).String()
+			}
+			dh, err := datapb.ToDataHash(genesis.Lookup(keys))
+			if err != nil {
+				return nil, err
+			}
+			stream.Send(&fsmpb.ActionMessage{resp.Id, dh})
+
+		case shared.GenesisNoticeId:
+			oh, err := datapb.FromDataHash(resp.Arguments)
+			if err != nil {
+				return nil, err
+			}
+			genesis.Notice(oh[`message`].String());
 
 		default:
 			return nil, fmt.Errorf("unexpected response id in ActionMessage: %d", resp.Id)
