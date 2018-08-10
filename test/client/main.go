@@ -24,7 +24,7 @@ func main() {
 	pClient := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: common.Handshake,
 		Plugins:         PluginMap,
-		Cmd:             exec.Command(home + "/tools/node/bin/node", home + "/git/js-fsm/src/ec2_attachinternetgw.js"),//
+		Cmd:             exec.Command(home + "/tools/node/bin/node", home + "/git/js-fsm/src/examples/ec2_attachinternetgw.js"),//
 		// Cmd:             exec.Command(projectHome + "/test/bin/build_test_server"),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 	})
