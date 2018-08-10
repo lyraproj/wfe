@@ -59,7 +59,7 @@ func (a *Actor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.
 func convertToPbActions(actions []api.Action) []*fsmpb.Action {
 	ps := make([]*fsmpb.Action, len(actions))
 	for i, p := range actions {
-		ps[i] = &fsmpb.Action{Id: int64(i), Name: p.Name(), Consumes: convertToPbParams(p.Consumes()), Produces: convertToPbParams(p.Produces())}
+		ps[i] = &fsmpb.Action{Id: int64(i), Name: p.Name(), Input: convertToPbParams(p.Input()), Output: convertToPbParams(p.Output())}
 	}
 	return ps
 }

@@ -7,17 +7,17 @@ import (
 type Action interface {
 	Name() string
 
-	Consumes() []Parameter
+	Input() []Parameter
 
-	Produces() []Parameter
+	Output() []Parameter
 
 	Call(Genesis, map[string]reflect.Value) map[string]reflect.Value
 }
 
 type action struct {
 	name     string
-	consumes []Parameter
-	produces []Parameter
+	input []Parameter
+	output []Parameter
 	function ActionFunction
 }
 
@@ -25,16 +25,16 @@ type ActionFunction interface {
 	Call(Genesis, Action, map[string]reflect.Value) map[string]reflect.Value
 }
 
-func NewAction(name string, function ActionFunction, consumes, produces []Parameter) Action {
-	return &action{name, consumes, produces, function}
+func NewAction(name string, function ActionFunction, input, output []Parameter) Action {
+	return &action{name, input, output, function}
 }
 
-func (a *action) Consumes() []Parameter {
-	return a.consumes
+func (a *action) Input() []Parameter {
+	return a.input
 }
 
-func (a *action) Produces() []Parameter {
-	return a.produces
+func (a *action) Output() []Parameter {
+	return a.output
 }
 
 func (a *action) Name() string {

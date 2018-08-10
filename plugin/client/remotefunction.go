@@ -13,7 +13,7 @@ type remoteFunction struct {
 }
 
 func NewRemoteAction(actor *GRPCActor, action *fsmpb.Action) api.Action {
-	return api.NewAction(action.Name, &remoteFunction{actor, action.Id}, convertFromPbParams(action.Consumes), convertFromPbParams(action.Produces))
+	return api.NewAction(action.Name, &remoteFunction{actor, action.Id}, convertFromPbParams(action.Input), convertFromPbParams(action.Output))
 }
 
 func (pf *remoteFunction) Call(g api.Genesis, a api.Action, args map[string]reflect.Value) map[string]reflect.Value {

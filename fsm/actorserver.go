@@ -22,7 +22,7 @@ type ActorServer interface {
 	// one procuder exists for each produced value.
 	Validate() error
 
-	// Run runs all registered actions in the order determined by their produces/consumes
+	// Run runs all registered actions in the order determined by their output/input
 	Run() error
 
 	DumpVariables()
@@ -76,8 +76,8 @@ func (s *actorServer) AddAction(na api.Action) {
 			panic(issue.NewReported(GENESIS_ACTION_ALREADY_DEFINED, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
 		}
 
-		for _, ra := range a.Produces() {
-			for _, rb := range na.Produces() {
+		for _, ra := range a.Output() {
+			for _, rb := range na.Output() {
 				if ra.Name() == rb.Name() {
 					panic(issue.NewReported(GENESIS_MULTIPLE_PRODUCERS_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`name1`: k, `name2`: na.Name(), `value`: ra.Name}, nil))
 				}
@@ -94,7 +94,7 @@ func (s *actorServer) Validate() error {
 	valueProducers := make(map[string]api.Action, len(actions)*5)
 	for _, a := range actions {
 		fa := a.(api.Action)
-		for _, r := range fa.Produces() {
+		for _, r := range fa.Output() {
 			valueProducers[r.Name()] = fa
 		}
 	}
@@ -144,7 +144,7 @@ func (s *actorServer) DumpVariables() {
 
 func (s *actorServer) dependents(a api.Action, valueProducers map[string]api.Action) ([]api.Action, error) {
 	dam := make(map[string]api.Action, 0)
-	for _, param := range a.Consumes() {
+	for _, param := range a.Input() {
 		if vp, found := valueProducers[param.Name()]; found {
 			dam[vp.Name()] = vp
 			continue
@@ -184,7 +184,7 @@ func (s *actorServer) runAction(a *serverAction) {
 
 	s.waitForEdgesTo(a)
 
-	params := a.Consumes()
+	params := a.Input()
 	args := make(map[string]reflect.Value, len(params))
 	s.valuesLock.RLock()
 	for _, param := range params {

@@ -32,16 +32,16 @@ func NewGoAction(name string, function interface{}) Action {
 		panic(badActionFunction(name, ar))
 	}
 
-	consumes := noParams
+	input := noParams
 	if inc == 2 {
-		consumes = reflectStruct(name, ar, ar.In(1))
+		input = reflectStruct(name, ar, ar.In(1))
 	}
 
-	produces := noParams
+	output := noParams
 	if outc == 2 {
-		produces = reflectStruct(name, ar, ar.Out(0))
+		output = reflectStruct(name, ar, ar.Out(0))
 	}
-	return NewAction(name, &goActionCall{function}, consumes, produces)
+	return NewAction(name, &goActionCall{function}, input, output)
 }
 
 func reflectStruct(name string, funcType, s reflect.Type) []Parameter {
@@ -85,7 +85,7 @@ func (ga *goActionCall) Call(g Genesis, a Action, args map[string]reflect.Value)
 	}
 	result := fv.Call(params)
 	expCount := 1
-	if len(a.Produces()) > 1 {
+	if len(a.Output()) > 1 {
 		expCount++
 	}
 	rn := len(result)
