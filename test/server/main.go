@@ -8,6 +8,7 @@ import (
 	"github.com/puppetlabs/go-fsm/plugin/server"
 	"github.com/puppetlabs/go-fsm/api"
 	"reflect"
+	"github.com/puppetlabs/go-fsm/fsm"
 )
 
 type OutA struct {
@@ -38,7 +39,7 @@ type InC struct {
 }
 
 func main() {
-	actor := server.NewActor(context.Background())
+	actor := fsm.NewActor(context.Background(), `testing`)
 
 	actor.Action("a", func(g api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
@@ -61,7 +62,7 @@ func main() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: common.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"actor": actor,
+			"actors": server.NewActorsPlugin(map[string]api.Actor{`testing`: actor}),
 		},
 		GRPCServer: plugin.DefaultGRPCServer,
 	})

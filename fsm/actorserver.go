@@ -54,7 +54,7 @@ type actorServer struct {
 	graph        *simple.DirectedGraph
 }
 
-func NewActorServer(ctx context.Context) ActorServer {
+func NewActorServer(ctx context.Context, actorName string) ActorServer {
 	return &actorServer{
 		genesis:  NewGenesis(ctx),
 		runLatch: make(map[int64]bool),

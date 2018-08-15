@@ -5,16 +5,17 @@ import "datapb/data.proto";
 
 option go_package = "github.com/puppetlabs/go-fsm/fsmpb";
 
-message ActionsRequest {
+message ActorRequest {
+  string name = 1;
 }
 
-message ActionsResponse {
+message Actor {
   repeated Action actions = 1;
 }
 
-message ActionMessage {
+message Message {
   int64 id = 1;
-  puppet.datapb.DataHash arguments = 2;
+  puppet.datapb.Data value = 2;
 }
 
 message Parameter {
@@ -23,14 +24,13 @@ message Parameter {
 }
 
 message Action {
-  int64 id = 1;
   string name = 2;
   repeated Parameter input = 3;
   repeated Parameter output = 4;
 }
 
-service Actor {
-  rpc GetActions (ActionsRequest) returns (ActionsResponse) {};
+service Actors {
+  rpc GetActor (ActorRequest) returns (Actor) {};
 
-  rpc InvokeAction (stream ActionMessage) returns (stream ActionMessage) {};
+  rpc InvokeAction (stream Message) returns (stream Message) {};
 }

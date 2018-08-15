@@ -8,9 +8,9 @@ It is generated from these files:
 	fsm.proto
 
 It has these top-level messages:
-	ActionsRequest
-	ActionsResponse
-	ActionMessage
+	ActorRequest
+	Actor
+	Message
 	Parameter
 	Action
 */
@@ -37,50 +37,58 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type ActionsRequest struct {
+type ActorRequest struct {
+	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
-func (m *ActionsRequest) Reset()                    { *m = ActionsRequest{} }
-func (m *ActionsRequest) String() string            { return proto.CompactTextString(m) }
-func (*ActionsRequest) ProtoMessage()               {}
-func (*ActionsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *ActorRequest) Reset()                    { *m = ActorRequest{} }
+func (m *ActorRequest) String() string            { return proto.CompactTextString(m) }
+func (*ActorRequest) ProtoMessage()               {}
+func (*ActorRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type ActionsResponse struct {
+func (m *ActorRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+type Actor struct {
 	Actions []*Action `protobuf:"bytes,1,rep,name=actions" json:"actions,omitempty"`
 }
 
-func (m *ActionsResponse) Reset()                    { *m = ActionsResponse{} }
-func (m *ActionsResponse) String() string            { return proto.CompactTextString(m) }
-func (*ActionsResponse) ProtoMessage()               {}
-func (*ActionsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (m *Actor) Reset()                    { *m = Actor{} }
+func (m *Actor) String() string            { return proto.CompactTextString(m) }
+func (*Actor) ProtoMessage()               {}
+func (*Actor) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *ActionsResponse) GetActions() []*Action {
+func (m *Actor) GetActions() []*Action {
 	if m != nil {
 		return m.Actions
 	}
 	return nil
 }
 
-type ActionMessage struct {
-	Id        int64                   `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
-	Arguments *puppet_datapb.DataHash `protobuf:"bytes,2,opt,name=arguments" json:"arguments,omitempty"`
+type Message struct {
+	Id    int64               `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
+	Value *puppet_datapb.Data `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
 }
 
-func (m *ActionMessage) Reset()                    { *m = ActionMessage{} }
-func (m *ActionMessage) String() string            { return proto.CompactTextString(m) }
-func (*ActionMessage) ProtoMessage()               {}
-func (*ActionMessage) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (m *Message) Reset()                    { *m = Message{} }
+func (m *Message) String() string            { return proto.CompactTextString(m) }
+func (*Message) ProtoMessage()               {}
+func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *ActionMessage) GetId() int64 {
+func (m *Message) GetId() int64 {
 	if m != nil {
 		return m.Id
 	}
 	return 0
 }
 
-func (m *ActionMessage) GetArguments() *puppet_datapb.DataHash {
+func (m *Message) GetValue() *puppet_datapb.Data {
 	if m != nil {
-		return m.Arguments
+		return m.Value
 	}
 	return nil
 }
@@ -110,7 +118,6 @@ func (m *Parameter) GetType() string {
 }
 
 type Action struct {
-	Id     int64        `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
 	Name   string       `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
 	Input  []*Parameter `protobuf:"bytes,3,rep,name=input" json:"input,omitempty"`
 	Output []*Parameter `protobuf:"bytes,4,rep,name=output" json:"output,omitempty"`
@@ -120,13 +127,6 @@ func (m *Action) Reset()                    { *m = Action{} }
 func (m *Action) String() string            { return proto.CompactTextString(m) }
 func (*Action) ProtoMessage()               {}
 func (*Action) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
-
-func (m *Action) GetId() int64 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
-}
 
 func (m *Action) GetName() string {
 	if m != nil {
@@ -150,9 +150,9 @@ func (m *Action) GetOutput() []*Parameter {
 }
 
 func init() {
-	proto.RegisterType((*ActionsRequest)(nil), "puppet.fsm.ActionsRequest")
-	proto.RegisterType((*ActionsResponse)(nil), "puppet.fsm.ActionsResponse")
-	proto.RegisterType((*ActionMessage)(nil), "puppet.fsm.ActionMessage")
+	proto.RegisterType((*ActorRequest)(nil), "puppet.fsm.ActorRequest")
+	proto.RegisterType((*Actor)(nil), "puppet.fsm.Actor")
+	proto.RegisterType((*Message)(nil), "puppet.fsm.Message")
 	proto.RegisterType((*Parameter)(nil), "puppet.fsm.Parameter")
 	proto.RegisterType((*Action)(nil), "puppet.fsm.Action")
 }
@@ -165,129 +165,129 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Actor service
+// Client API for Actors service
 
-type ActorClient interface {
-	GetActions(ctx context.Context, in *ActionsRequest, opts ...grpc.CallOption) (*ActionsResponse, error)
-	InvokeAction(ctx context.Context, opts ...grpc.CallOption) (Actor_InvokeActionClient, error)
+type ActorsClient interface {
+	GetActor(ctx context.Context, in *ActorRequest, opts ...grpc.CallOption) (*Actor, error)
+	InvokeAction(ctx context.Context, opts ...grpc.CallOption) (Actors_InvokeActionClient, error)
 }
 
-type actorClient struct {
+type actorsClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewActorClient(cc *grpc.ClientConn) ActorClient {
-	return &actorClient{cc}
+func NewActorsClient(cc *grpc.ClientConn) ActorsClient {
+	return &actorsClient{cc}
 }
 
-func (c *actorClient) GetActions(ctx context.Context, in *ActionsRequest, opts ...grpc.CallOption) (*ActionsResponse, error) {
-	out := new(ActionsResponse)
-	err := grpc.Invoke(ctx, "/puppet.fsm.Actor/GetActions", in, out, c.cc, opts...)
+func (c *actorsClient) GetActor(ctx context.Context, in *ActorRequest, opts ...grpc.CallOption) (*Actor, error) {
+	out := new(Actor)
+	err := grpc.Invoke(ctx, "/puppet.fsm.Actors/GetActor", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *actorClient) InvokeAction(ctx context.Context, opts ...grpc.CallOption) (Actor_InvokeActionClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Actor_serviceDesc.Streams[0], c.cc, "/puppet.fsm.Actor/InvokeAction", opts...)
+func (c *actorsClient) InvokeAction(ctx context.Context, opts ...grpc.CallOption) (Actors_InvokeActionClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Actors_serviceDesc.Streams[0], c.cc, "/puppet.fsm.Actors/InvokeAction", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &actorInvokeActionClient{stream}
+	x := &actorsInvokeActionClient{stream}
 	return x, nil
 }
 
-type Actor_InvokeActionClient interface {
-	Send(*ActionMessage) error
-	Recv() (*ActionMessage, error)
+type Actors_InvokeActionClient interface {
+	Send(*Message) error
+	Recv() (*Message, error)
 	grpc.ClientStream
 }
 
-type actorInvokeActionClient struct {
+type actorsInvokeActionClient struct {
 	grpc.ClientStream
 }
 
-func (x *actorInvokeActionClient) Send(m *ActionMessage) error {
+func (x *actorsInvokeActionClient) Send(m *Message) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *actorInvokeActionClient) Recv() (*ActionMessage, error) {
-	m := new(ActionMessage)
+func (x *actorsInvokeActionClient) Recv() (*Message, error) {
+	m := new(Message)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-// Server API for Actor service
+// Server API for Actors service
 
-type ActorServer interface {
-	GetActions(context.Context, *ActionsRequest) (*ActionsResponse, error)
-	InvokeAction(Actor_InvokeActionServer) error
+type ActorsServer interface {
+	GetActor(context.Context, *ActorRequest) (*Actor, error)
+	InvokeAction(Actors_InvokeActionServer) error
 }
 
-func RegisterActorServer(s *grpc.Server, srv ActorServer) {
-	s.RegisterService(&_Actor_serviceDesc, srv)
+func RegisterActorsServer(s *grpc.Server, srv ActorsServer) {
+	s.RegisterService(&_Actors_serviceDesc, srv)
 }
 
-func _Actor_GetActions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ActionsRequest)
+func _Actors_GetActor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ActorServer).GetActions(ctx, in)
+		return srv.(ActorsServer).GetActor(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/puppet.fsm.Actor/GetActions",
+		FullMethod: "/puppet.fsm.Actors/GetActor",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ActorServer).GetActions(ctx, req.(*ActionsRequest))
+		return srv.(ActorsServer).GetActor(ctx, req.(*ActorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Actor_InvokeAction_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ActorServer).InvokeAction(&actorInvokeActionServer{stream})
+func _Actors_InvokeAction_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ActorsServer).InvokeAction(&actorsInvokeActionServer{stream})
 }
 
-type Actor_InvokeActionServer interface {
-	Send(*ActionMessage) error
-	Recv() (*ActionMessage, error)
+type Actors_InvokeActionServer interface {
+	Send(*Message) error
+	Recv() (*Message, error)
 	grpc.ServerStream
 }
 
-type actorInvokeActionServer struct {
+type actorsInvokeActionServer struct {
 	grpc.ServerStream
 }
 
-func (x *actorInvokeActionServer) Send(m *ActionMessage) error {
+func (x *actorsInvokeActionServer) Send(m *Message) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *actorInvokeActionServer) Recv() (*ActionMessage, error) {
-	m := new(ActionMessage)
+func (x *actorsInvokeActionServer) Recv() (*Message, error) {
+	m := new(Message)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-var _Actor_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "puppet.fsm.Actor",
-	HandlerType: (*ActorServer)(nil),
+var _Actors_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "puppet.fsm.Actors",
+	HandlerType: (*ActorsServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetActions",
-			Handler:    _Actor_GetActions_Handler,
+			MethodName: "GetActor",
+			Handler:    _Actors_GetActor_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "InvokeAction",
-			Handler:       _Actor_InvokeAction_Handler,
+			Handler:       _Actors_InvokeAction_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -298,27 +298,26 @@ var _Actor_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("fsm.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 351 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0xcf, 0x4a, 0xeb, 0x40,
-	0x14, 0xc6, 0x3b, 0xe9, 0x9f, 0x4b, 0x4e, 0xef, 0xed, 0xd5, 0x01, 0x31, 0xc6, 0x4d, 0x19, 0x5c,
-	0x04, 0xb4, 0x89, 0xb4, 0xb8, 0x96, 0x8a, 0x50, 0x15, 0x04, 0x99, 0x85, 0x0b, 0x77, 0x93, 0x76,
-	0x92, 0x06, 0x9d, 0xcc, 0x98, 0x99, 0x08, 0xbe, 0x81, 0x0f, 0xe1, 0xc3, 0x4a, 0x33, 0x49, 0x5b,
-	0xa8, 0xba, 0xca, 0xe1, 0x3b, 0x3f, 0xbe, 0x9c, 0x73, 0xbe, 0x01, 0x37, 0xd1, 0x22, 0x54, 0x85,
-	0x34, 0x12, 0x83, 0x2a, 0x95, 0xe2, 0x26, 0x4c, 0xb4, 0xf0, 0xf7, 0x17, 0xcc, 0x30, 0x15, 0x47,
-	0xab, 0x8f, 0x6d, 0x93, 0x3d, 0x18, 0x4c, 0xe7, 0x26, 0x93, 0xb9, 0xa6, 0xfc, 0xb5, 0xe4, 0xda,
-	0x90, 0x4b, 0xf8, 0xbf, 0x56, 0xb4, 0x92, 0xb9, 0xe6, 0xf8, 0x0c, 0xfe, 0x30, 0x2b, 0x79, 0x68,
-	0xd8, 0x0e, 0xfa, 0x63, 0x1c, 0x6e, 0x5c, 0x43, 0x4b, 0xd3, 0x06, 0x21, 0x8f, 0xf0, 0xcf, 0x4a,
-	0xf7, 0x5c, 0x6b, 0x96, 0x72, 0x3c, 0x00, 0x27, 0x5b, 0x78, 0x68, 0x88, 0x82, 0x36, 0x75, 0xb2,
-	0x05, 0xbe, 0x00, 0x97, 0x15, 0x69, 0x29, 0x78, 0x6e, 0xb4, 0xe7, 0x0c, 0x51, 0xd0, 0x1f, 0x1f,
-	0x36, 0x86, 0x76, 0xc2, 0xf0, 0x9a, 0x19, 0x76, 0xc3, 0xf4, 0x92, 0x6e, 0x48, 0x32, 0x01, 0xf7,
-	0x81, 0x15, 0x4c, 0x70, 0xc3, 0x0b, 0x8c, 0xa1, 0x93, 0x33, 0xc1, 0x2b, 0x57, 0x97, 0x56, 0xf5,
-	0x4a, 0x33, 0xef, 0x8a, 0x57, 0x96, 0x2e, 0xad, 0x6a, 0xf2, 0x81, 0xa0, 0x67, 0xa7, 0xd9, 0x19,
-	0xa3, 0xb1, 0x70, 0xb6, 0x2c, 0x4e, 0xa1, 0x9b, 0xe5, 0xaa, 0x34, 0x5e, 0xbb, 0xda, 0xf3, 0x60,
-	0x7b, 0xcf, 0xf5, 0xcf, 0xa9, 0x65, 0xf0, 0x08, 0x7a, 0xb2, 0x34, 0x2b, 0xba, 0xf3, 0x1b, 0x5d,
-	0x43, 0xe3, 0x4f, 0x04, 0xdd, 0xe9, 0xdc, 0xc8, 0x02, 0xcf, 0x00, 0x66, 0xdc, 0xd4, 0x57, 0xc6,
-	0xfe, 0xee, 0x31, 0x9b, 0x30, 0xfc, 0xe3, 0x6f, 0x7b, 0x36, 0x16, 0xd2, 0xc2, 0x77, 0xf0, 0xf7,
-	0x36, 0x7f, 0x93, 0xcf, 0xbc, 0x5e, 0xf1, 0x68, 0x17, 0xaf, 0x43, 0xf0, 0x7f, 0x6e, 0x91, 0x56,
-	0x80, 0xce, 0xd1, 0xd5, 0xc9, 0x13, 0x49, 0x33, 0xb3, 0x2c, 0xe3, 0x70, 0x2e, 0x45, 0x64, 0xe1,
-	0x17, 0x16, 0xeb, 0x28, 0x95, 0xa3, 0x44, 0x8b, 0x28, 0xd1, 0x42, 0xc5, 0x71, 0xaf, 0x7a, 0x36,
-	0x93, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x84, 0xf0, 0x77, 0x3e, 0x62, 0x02, 0x00, 0x00,
+	// 331 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0x4f, 0x4b, 0xc3, 0x40,
+	0x10, 0xc5, 0x9b, 0xf4, 0x9f, 0x99, 0x16, 0xa1, 0x5b, 0x84, 0xd0, 0x53, 0x59, 0x3c, 0x44, 0xb4,
+	0x89, 0xb4, 0x78, 0xf0, 0x22, 0x54, 0x0a, 0xe2, 0x41, 0x90, 0x3d, 0x7a, 0xdb, 0xb4, 0x9b, 0x1a,
+	0xec, 0x66, 0xd7, 0xec, 0xa4, 0xe8, 0xd9, 0x2f, 0x2e, 0xdd, 0x6d, 0x6b, 0xd1, 0xe2, 0x69, 0x87,
+	0x99, 0xdf, 0xbc, 0x99, 0x79, 0x2c, 0x04, 0x99, 0x91, 0xb1, 0x2e, 0x15, 0x2a, 0x02, 0xba, 0xd2,
+	0x5a, 0x60, 0x9c, 0x19, 0x39, 0xe8, 0x2d, 0x38, 0x72, 0x9d, 0x26, 0x9b, 0xc7, 0x95, 0x29, 0x85,
+	0xee, 0x74, 0x8e, 0xaa, 0x64, 0xe2, 0xbd, 0x12, 0x06, 0x09, 0x81, 0x46, 0xc1, 0xa5, 0x08, 0xbd,
+	0xa1, 0x17, 0x05, 0xcc, 0xc6, 0xf4, 0x06, 0x9a, 0x96, 0x21, 0x57, 0xd0, 0xe6, 0x73, 0xcc, 0x55,
+	0x61, 0x42, 0x6f, 0x58, 0x8f, 0x3a, 0x63, 0x12, 0xff, 0xa8, 0xc7, 0x53, 0x5b, 0x62, 0x3b, 0x84,
+	0xce, 0xa0, 0xfd, 0x24, 0x8c, 0xe1, 0x4b, 0x41, 0x4e, 0xc1, 0xcf, 0x17, 0x56, 0xb3, 0xce, 0xfc,
+	0x7c, 0x41, 0x2e, 0xa0, 0xb9, 0xe6, 0xab, 0x4a, 0x84, 0xfe, 0xd0, 0x8b, 0x3a, 0xe3, 0xfe, 0x4e,
+	0xc6, 0xed, 0x17, 0xcf, 0x38, 0x72, 0xe6, 0x08, 0x3a, 0x81, 0xe0, 0x99, 0x97, 0x5c, 0x0a, 0x14,
+	0xe5, 0xb1, 0xed, 0x36, 0x39, 0xfc, 0xd4, 0x4e, 0x2a, 0x60, 0x36, 0xa6, 0x1f, 0xd0, 0x72, 0xdb,
+	0xec, 0x3b, 0xfc, 0x83, 0x8e, 0x4b, 0x68, 0xe6, 0x85, 0xae, 0x30, 0xac, 0xdb, 0x23, 0xce, 0x0e,
+	0x8f, 0xd8, 0xcf, 0x62, 0x8e, 0x21, 0x23, 0x68, 0xa9, 0x0a, 0x37, 0x74, 0xe3, 0x3f, 0x7a, 0x0b,
+	0x8d, 0xbf, 0x3c, 0x3b, 0x5a, 0x95, 0x86, 0xdc, 0xc2, 0xc9, 0x83, 0x40, 0xe7, 0x5c, 0xf8, 0xcb,
+	0xa8, 0xbd, 0xe1, 0x83, 0xde, 0x9f, 0x0a, 0xad, 0x91, 0x3b, 0xe8, 0x3e, 0x16, 0x6b, 0xf5, 0x26,
+	0xb6, 0x57, 0xf4, 0x0f, 0xa1, 0xad, 0xa9, 0x83, 0x63, 0x49, 0x5a, 0x8b, 0xbc, 0x6b, 0xef, 0xfe,
+	0xfc, 0x85, 0x2e, 0x73, 0x7c, 0xad, 0xd2, 0x78, 0xae, 0x64, 0xe2, 0xb0, 0x15, 0x4f, 0x4d, 0xb2,
+	0x54, 0xa3, 0xcc, 0xc8, 0x24, 0x33, 0x52, 0xa7, 0x69, 0xcb, 0x7e, 0x81, 0xc9, 0x77, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0xe9, 0x25, 0x1d, 0x7f, 0x2e, 0x02, 0x00, 0x00,
 }

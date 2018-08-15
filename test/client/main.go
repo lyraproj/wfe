@@ -12,7 +12,7 @@ import (
 
 // PluginMap is the map of plugins we can dispense.
 var PluginMap = map[string]plugin.Plugin{
-	"actor": &client.Actor{},
+	"actors": &client.ActorsPlugin{},
 }
 
 func main() {
@@ -29,5 +29,5 @@ func main() {
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 	})
 	defer pClient.Kill()
-	client.RunActions(pClient)
+	client.RunActions(`attach`, pClient)
 }

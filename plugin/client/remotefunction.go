@@ -8,28 +8,29 @@ import (
 )
 
 type remoteFunction struct {
-	actor *GRPCActor
-	id    int64
+	actors *GRPCActors
+	actorName string
+	actionName string
 }
 
-func NewRemoteAction(actor *GRPCActor, action *fsmpb.Action) api.Action {
-	return api.NewAction(action.Name, &remoteFunction{actor, action.Id}, convertFromPbParams(action.Input), convertFromPbParams(action.Output))
+func NewRemoteAction(actors *GRPCActors, actorName string, action *fsmpb.Action) api.Action {
+	return api.NewAction(action.Name, &remoteFunction{actors: actors, actorName: actorName, actionName: action.Name}, convertFromPbParams(action.Input), convertFromPbParams(action.Output))
 }
 
 func (pf *remoteFunction) Call(g api.Genesis, a api.Action, args map[string]reflect.Value) map[string]reflect.Value {
-	dh, err := datapb.ToDataHash(args)
+	d, err := datapb.ToData(reflect.ValueOf([]interface{}{pf.actorName, pf.actionName, args}))
 	if err != nil {
 		panic(err)
 	}
-	dh, err = pf.actor.InvokeAction(pf.id, dh, g)
+	d, err = pf.actors.InvokeAction(d, g)
 	if err != nil {
 		panic(err)
 	}
-	vh, err := datapb.FromDataHash(dh)
+	v, err := datapb.FromDataHash(d.GetHashValue())
 	if err != nil {
 		panic(err)
 	}
-	return vh
+	return v
 }
 
 func convertFromPbParams(params []*fsmpb.Parameter) []api.Parameter {

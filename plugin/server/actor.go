@@ -11,93 +11,52 @@ import (
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"reflect"
 	"io"
+	"github.com/puppetlabs/go-fsm/plugin/shared"
+	"sort"
 )
 
-type Actor struct {
-	context.Context
-	actions []api.Action
+type ActorsPlugin struct {
+	actors map[string]api.Actor
 }
 
-func NewActor(ctx context.Context) *Actor {
-	return &Actor{ctx, make([]api.Action, 0, 7)}
+func NewActorsPlugin(actors map[string]api.Actor) *ActorsPlugin {
+	return &ActorsPlugin{actors}
 }
 
-func (s *Actor) Action(name string, function interface{}) {
-	s.actions = append(s.actions, api.NewGoAction(name, function))
-}
-
-func (a *Actor) GetActions() []*fsmpb.Action {
-	return convertToPbActions(a.actions)
-}
-
-func (a *Actor) InvokeAction(id int64, parameters *datapb.DataHash, genesis api.Genesis) *datapb.DataHash {
-	if id < 0 || int(id) >= len(a.actions) {
-		panic(fmt.Errorf("no action with ID %d", id))
+func (a *ActorsPlugin) GetActor(name string) api.Actor {
+	actor, found := a.actors[name]
+	if !found {
+		panic(fmt.Errorf("no such actor '%s'", name))
 	}
-
-	ep := parameters.Entries
-	rm := make(map[string]reflect.Value, len(ep))
-	for _, p := range ep {
-		arg, err := datapb.FromData(p.Value)
-		if err != nil {
-			panic(err)
-		}
-		rm[p.Key] = arg
-	}
-	cr := a.actions[id].Call(genesis, rm)
-	ep = make([]*datapb.DataEntry, 0, len(cr))
-	for k, v := range cr {
-		rv, err := datapb.ToData(v)
-		if err != nil {
-			panic(err)
-		}
-		ep = append(ep, &datapb.DataEntry{Key: k, Value: rv})
-	}
-	return &datapb.DataHash{Entries: ep}
+	return actor
 }
 
-func convertToPbActions(actions []api.Action) []*fsmpb.Action {
-	ps := make([]*fsmpb.Action, len(actions))
-	for i, p := range actions {
-		ps[i] = &fsmpb.Action{Id: int64(i), Name: p.Name(), Input: convertToPbParams(p.Input()), Output: convertToPbParams(p.Output())}
-	}
-	return ps
-}
-
-func convertToPbParams(params []api.Parameter) []*fsmpb.Parameter {
-	ps := make([]*fsmpb.Parameter, len(params))
-	for i, p := range params {
-		ps[i] = &fsmpb.Parameter{p.Name(), p.Type()}
-	}
-	return ps
-}
-
-func (a *Actor) Server(*plugin.MuxBroker) (interface{}, error) {
+func (a *ActorsPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
 	return nil, fmt.Errorf(`%T has no server implementation for rpc`, a)
 }
 
-func (a *Actor) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
+func (a *ActorsPlugin) Client(*plugin.MuxBroker, *rpc.Client) (interface{}, error) {
 	return nil, fmt.Errorf(`%T has no client implementation for rpc`, a)
 }
 
-func (a *Actor) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	fsmpb.RegisterActorServer(s, &GRPCServer{impl: a})
+func (a *ActorsPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+	fsmpb.RegisterActorsServer(s, &GRPCServer{impl: a})
 	return nil
 }
 
-func (a *Actor) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (a *ActorsPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return nil, fmt.Errorf(`%T has no client implementation for grpc`, a)
 }
 
 type GRPCServer struct {
-	impl *Actor
+	impl *ActorsPlugin
 }
 
-func (s *GRPCServer) GetActions(ctx context.Context, ar *fsmpb.ActionsRequest) (*fsmpb.ActionsResponse, error) {
-	return &fsmpb.ActionsResponse{Actions: s.impl.GetActions()}, nil
+func (s *GRPCServer) GetActor(ctx context.Context, ar *fsmpb.ActorRequest) (*fsmpb.Actor, error) {
+	return &fsmpb.Actor{Actions: convertToPbActions(s.impl.GetActor(ar.GetName()).GetActions())}, nil
 }
 
-func (s *GRPCServer) InvokeAction(stream fsmpb.Actor_InvokeActionServer) error {
+func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error {
 	for {
 		in, err := stream.Recv()
 		if err != nil {
@@ -106,9 +65,62 @@ func (s *GRPCServer) InvokeAction(stream fsmpb.Actor_InvokeActionServer) error {
 			}
 			return err
 		}
-		err = stream.Send(&fsmpb.ActionMessage{in.Id, s.impl.InvokeAction(in.Id, in.Arguments, NewGenesis(stream))})
+		if in.GetId() != shared.InvokeActionId {
+			continue
+		}
+		da := in.GetValue().GetArrayValue()
+		if da == nil || len(da.Values) != 3 {
+			return fmt.Errorf(`InvokeAction expects a 3 element array`)
+		}
+		actorName := da.Values[0].GetStringValue()
+		actionName := da.Values[1].GetStringValue()
+
+		ep := da.Values[2].GetHashValue().Entries
+		rm := make(map[string]reflect.Value, len(ep))
+		for _, p := range ep {
+			arg, err := datapb.FromData(p.Value)
+			if err != nil {
+				panic(err)
+			}
+			rm[p.Key] = arg
+		}
+
+		rv := s.impl.GetActor(actorName).InvokeAction(actionName, rm, NewGenesis(stream))
+
+		ep = make([]*datapb.DataEntry, 0, len(rv))
+		for k, v := range rv {
+			rv, err := datapb.ToData(v)
+			if err != nil {
+				panic(err)
+			}
+			ep = append(ep, &datapb.DataEntry{Key: k, Value: rv})
+		}
+		result := &datapb.Data{Kind: &datapb.Data_HashValue{HashValue: &datapb.DataHash{Entries: ep}}}
+
+		err = stream.Send(&fsmpb.Message{Id: shared.InvokeActionId, Value: result})
 		if err != nil {
 			return err
 		}
 	}
 }
+
+func convertToPbActions(actions map[string]api.Action) []*fsmpb.Action {
+	ps := make([]*fsmpb.Action, 0, len(actions))
+	for _, p := range actions {
+		ps = append(ps, &fsmpb.Action{Name: p.Name(), Input: convertToPbParams(p.Input()), Output: convertToPbParams(p.Output())})
+	}
+	// Send in predictable order (sorted alphabetically on name)
+	sort.Slice(ps, func(i, j int) bool {
+		return ps[i].Name < ps[j].Name
+	})
+	return ps
+}
+
+func convertToPbParams(params []api.Parameter) []*fsmpb.Parameter {
+	ps := make([]*fsmpb.Parameter, len(params))
+	for i, p := range params {
+		ps[i] = &fsmpb.Parameter{Name: p.Name(), Type: p.Type()}
+	}
+	return ps
+}
+
