@@ -35,7 +35,7 @@ func (a *ActorsPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker
 	return &GRPCActors{ctx, broker, fsmpb.NewActorsClient(c)}, nil
 }
 
-func RunActions(actorName string, client *plugin.Client) {
+func RunActor(actorName string, client *plugin.Client, input map[string]reflect.Value) map[string]reflect.Value {
 	// Connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
@@ -52,18 +52,17 @@ func RunActions(actorName string, client *plugin.Client) {
 
 	actors := raw.(*GRPCActors)
 	ctx := context.Background()
-	actions := actors.GetActor(actorName)
+	actor := actors.GetActor(actorName)
 	if err != nil {
 		log.Fatalf("could not get actor: %v", err)
 	}
 
-	g := fsm.NewActorServer(ctx, actorName)
-	for _, action := range actions {
+	g := fsm.NewActorServer(ctx, actorName, shared.ConvertFromPbParams(actor.Input), shared.ConvertFromPbParams(actor.Output))
+	for _, action := range actor.Actions {
 		g.AddAction(NewRemoteAction(actors, actorName, action))
 	}
 	g.Validate()
-	g.Run()
-	g.DumpVariables()
+	return g.Call(nil, input)
 }
 
 type GRPCActors struct {
@@ -72,12 +71,12 @@ type GRPCActors struct {
 	client fsmpb.ActorsClient
 }
 
-func (c *GRPCActors) GetActor(name string) []*fsmpb.Action {
+func (c *GRPCActors) GetActor(name string) *fsmpb.Actor {
 	resp, err := c.client.GetActor(c.ctx, &fsmpb.ActorRequest{Name: name})
 	if err != nil {
 		panic(err)
 	}
-	return resp.Actions
+	return resp
 }
 
 func (c *GRPCActors) InvokeAction(args *datapb.Data, genesis api.Genesis) (*datapb.Data, error) {
@@ -110,22 +109,6 @@ func (c *GRPCActors) InvokeAction(args *datapb.Data, genesis api.Genesis) (*data
 				return nil, err
 			}
 			stream.Send(&fsmpb.Message{Id: resp.Id, Value: d})
-
-		case shared.GenesisLookupId:
-			d, err := datapb.FromData(resp.GetValue())
-			if err != nil {
-				return nil, err
-			}
-			cnt := d.Len()
-			keys := make([]string, cnt)
-			for i := 0; i < cnt; i++ {
-				keys[i] = d.Index(i).String()
-			}
-			v, err := datapb.ToData(reflect.ValueOf(genesis.Lookup(keys)))
-			if err != nil {
-				return nil, err
-			}
-			stream.Send(&fsmpb.Message{Id: resp.Id, Value: v})
 
 		case shared.GenesisNoticeId:
 			v, err := datapb.FromData(resp.GetValue())

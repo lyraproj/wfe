@@ -27,8 +27,8 @@ func NewGoAction(name string, function interface{}) Action {
 		panic(badActionFunction(name, ar))
 	}
 
-	outc := ar.NumOut()
-	if !(outc == 1 && ar.Out(0).AssignableTo(errorType) || outc == 2 && ar.Out(1).AssignableTo(errorType)) {
+	oc := ar.NumOut()
+	if !(oc == 1 && ar.Out(0).AssignableTo(errorType) || oc == 2 && ar.Out(1).AssignableTo(errorType)) {
 		panic(badActionFunction(name, ar))
 	}
 
@@ -38,7 +38,7 @@ func NewGoAction(name string, function interface{}) Action {
 	}
 
 	output := noParams
-	if outc == 2 {
+	if oc == 2 {
 		output = reflectStruct(name, ar, ar.Out(0))
 	}
 	return NewAction(name, &goActionCall{function}, input, output)
@@ -57,7 +57,9 @@ func reflectStruct(name string, funcType, s reflect.Type) []Parameter {
 	params := make([]Parameter, outCount)
 	for i := 0; i < outCount; i++ {
 		fld := s.Field(i)
-		params[i] = NewParameter(issue.CamelToSnakeCase(fld.Name), fld.Type.String())
+
+		// TODO: Use tags to denote lookup?
+		params[i] = NewParameter(issue.CamelToSnakeCase(fld.Name), fld.Type.String(), nil)
 	}
 	return params
 }
@@ -114,17 +116,17 @@ func (ga *goActionCall) Call(g Genesis, a Action, args map[string]reflect.Value)
 	if rt.Kind() != reflect.Struct {
 		panic(issue.NewReported(GENESIS_ACTION_BAD_RETURN, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `type`: rt.String()}, nil))
 	}
-	fcnt := rt.NumField()
-	rmap := make(map[string]reflect.Value, fcnt)
-	for i := 0; i < fcnt; i++ {
+	fc := rt.NumField()
+	rm := make(map[string]reflect.Value, fc)
+	for i := 0; i < fc; i++ {
 		ft := rt.Field(i)
 		v := rs.Field(i)
 		n := issue.CamelToSnakeCase(ft.Name)
 		if v.IsValid() {
-			rmap[n] = v
+			rm[n] = v
 		} else {
-			rmap[n] = reflect.Zero(ft.Type)
+			rm[n] = reflect.Zero(ft.Type)
 		}
 	}
-	return rmap
+	return rm
 }

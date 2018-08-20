@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/puppetlabs/go-fsm/api"
+	"reflect"
 )
 
 func ExampleActorServer_Action() {
@@ -35,7 +36,7 @@ func ExampleActorServer_Action() {
 	}
 
 	// Run actions in process by adding actions directly to the actor server
-	as := NewActorServer(context.Background())
+	as := NewActorServer(context.Background(), `test`, []api.Parameter{}, []api.Parameter{})
 	as.Action("a", func(s api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
 	})
@@ -55,7 +56,7 @@ func ExampleActorServer_Action() {
 
 	err := as.Validate()
 	if err == nil {
-		err = as.Run()
+		fmt.Println(as.Call(nil, map[string]reflect.Value{}))
 	}
 	if err != nil {
 		fmt.Println(err)

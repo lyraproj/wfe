@@ -39,7 +39,7 @@ type InC struct {
 }
 
 func main() {
-	actor := fsm.NewActor(context.Background(), `testing`)
+	actor := fsm.NewActorServer(context.Background(), `testing`, []api.Parameter{}, []api.Parameter{})
 
 	actor.Action("a", func(g api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil

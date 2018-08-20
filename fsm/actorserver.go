@@ -11,21 +11,19 @@ import (
 	"sync"
 	"sync/atomic"
 	"fmt"
+	"github.com/puppetlabs/data-protobuf/datapb"
 )
 
 type ActorServer interface {
+	api.Actor
+
 	api.GoActorBuilder
 
 	AddAction(na api.Action)
 
 	// Validate ensures that all consumed values have a corresponding producer and that only
-	// one procuder exists for each produced value.
+	// one producer exists for each produced value.
 	Validate() error
-
-	// Run runs all registered actions in the order determined by their output/input
-	Run() error
-
-	DumpVariables()
 }
 
 type serverAction struct {
@@ -43,6 +41,12 @@ func (a *serverAction) Resolved() <-chan bool {
 }
 
 type actorServer struct {
+	context.Context
+	name string
+	input []api.Parameter
+	output []api.Parameter
+	actions map[string]api.Action
+
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
 	genesis      api.Genesis
@@ -54,8 +58,12 @@ type actorServer struct {
 	graph        *simple.DirectedGraph
 }
 
-func NewActorServer(ctx context.Context, actorName string) ActorServer {
+func NewActorServer(ctx context.Context, actorName string, input, output []api.Parameter) ActorServer {
 	return &actorServer{
+		Context:  ctx,
+		name:     actorName,
+		input:    input,
+		output:   output,
 		genesis:  NewGenesis(ctx),
 		runLatch: make(map[int64]bool),
 		values:   make(map[string]reflect.Value, 37),
@@ -112,12 +120,56 @@ func (s *actorServer) Validate() error {
 	return nil
 }
 
-func (s *actorServer) Run() error {
+func (s *actorServer) Input() []api.Parameter {
+	return s.input
+}
+
+func (s *actorServer) Output() []api.Parameter {
+	return s.output
+}
+
+func (s *actorServer) GetActions() map[string]api.Action {
+	return s.actions
+}
+
+func (s *actorServer) Name() string {
+	return s.name
+}
+
+func (s *actorServer) InvokeAction(actionName string, in map[string]reflect.Value, genesis api.Genesis) map[string]reflect.Value {
+	action, found := s.actions[actionName]
+	if !found {
+		panic(fmt.Errorf("no action with name '%s' in actor '%s'", actionName, s.name))
+	}
+	return action.Call(genesis, in)
+}
+
+func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[string]reflect.Value {
 	// Run all nodes that can run, i.e. root nodes
 	actions := s.graph.Nodes()
 	if len(actions) == 0 {
 		return nil
 	}
+
+	params := s.input
+	args := make(map[string]reflect.Value, len(params))
+	s.valuesLock.RLock()
+	for _, param := range params {
+		n := param.Name()
+		lu := param.Lookup()
+		var v reflect.Value
+		ok := false
+		if lu == nil {
+			v, ok = input[n]
+		} else {
+			v, ok = s.lookupOne(lu.String())
+		}
+		if !ok {
+			panic(issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: s.name, `value`: n}, nil))
+		}
+		args[n] = v
+	}
+	s.valuesLock.RUnlock()
 
 	for w := 1; w <= 5; w++ {
 		go s.actionWorker(w)
@@ -128,7 +180,13 @@ func (s *actorServer) Run() error {
 		}
 	}
 	<-s.done
-	return nil
+
+	result := make(map[string]reflect.Value, len(s.output))
+	for _, out := range s.output {
+		n := out.Name()
+		result[n] = s.values[n]
+	}
+	return result
 }
 
 func (s *actorServer) DumpVariables() {
@@ -145,11 +203,13 @@ func (s *actorServer) DumpVariables() {
 func (s *actorServer) dependents(a api.Action, valueProducers map[string]api.Action) ([]api.Action, error) {
 	dam := make(map[string]api.Action, 0)
 	for _, param := range a.Input() {
-		if vp, found := valueProducers[param.Name()]; found {
-			dam[vp.Name()] = vp
-			continue
+		if param.Lookup() == nil {
+			if vp, found := valueProducers[param.Name()]; found {
+				dam[vp.Name()] = vp
+				continue
+			}
+			return nil, issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: a.Name(), `value`: param.Name}, nil)
 		}
-		return nil, issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: a.Name(), `value`: param.Name}, nil)
 	}
 	da := make([]api.Action, 0, len(dam))
 	for _, vp := range dam {
@@ -188,7 +248,17 @@ func (s *actorServer) runAction(a *serverAction) {
 	args := make(map[string]reflect.Value, len(params))
 	s.valuesLock.RLock()
 	for _, param := range params {
-		args[param.Name()] = s.values[param.Name()]
+		n := param.Name()
+		lu := param.Lookup()
+		if lu == nil {
+			args[n] = s.values[n]
+		} else {
+			if v, ok := s.lookupOne(lu.String()); ok {
+				args[n] = v
+			} else {
+				panic(issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: a.Name(), `value`: n}, nil))
+			}
+		}
 	}
 	s.valuesLock.RUnlock()
 
@@ -208,6 +278,33 @@ func (s *actorServer) runAction(a *serverAction) {
 	for _, n := range s.graph.From(a.ID()) {
 		s.scheduleAction(n.(*serverAction))
 	}
+}
+
+func (s *actorServer) Lookup(keys []string) map[string]reflect.Value {
+	result := make(map[string]reflect.Value, len(keys))
+	for _, k := range keys {
+		if v, ok := s.lookupOne(k); ok {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+func (s *actorServer) lookupOne(key string) (reflect.Value, bool) {
+	testing := map[string]interface{}{
+		`aws.region`: `eu-west-1`,
+		`aws.tags`: map[string]string {
+			`created_by`: `john.mccabe@puppet.com`,
+  		`department`: `engineering`,
+			`project`   : `incubator`,
+	  	`lifetime`  : `1h`,
+		},
+	}
+	v, ok := testing[key]
+	if ok {
+		return reflect.ValueOf(v), true
+	}
+	return datapb.InvalidValue, false
 }
 
 // Ensure that all nodes that has an edge to this node have been

@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"github.com/puppetlabs/go-fsm/plugin/client"
 	"os"
+	"reflect"
+	"fmt"
 )
 
 // PluginMap is the map of plugins we can dispense.
@@ -29,5 +31,5 @@ func main() {
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 	})
 	defer pClient.Kill()
-	client.RunActions(`attach`, pClient)
+	fmt.Println(client.RunActor(`attach`, pClient, map[string]reflect.Value{}))
 }

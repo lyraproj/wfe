@@ -107,20 +107,12 @@ func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error 
 func convertToPbActions(actions map[string]api.Action) []*fsmpb.Action {
 	ps := make([]*fsmpb.Action, 0, len(actions))
 	for _, p := range actions {
-		ps = append(ps, &fsmpb.Action{Name: p.Name(), Input: convertToPbParams(p.Input()), Output: convertToPbParams(p.Output())})
+		ps = append(ps, &fsmpb.Action{Name: p.Name(), Input: shared.ConvertToPbParams(p.Input()), Output: shared.ConvertToPbParams(p.Output())})
 	}
 	// Send in predictable order (sorted alphabetically on name)
 	sort.Slice(ps, func(i, j int) bool {
 		return ps[i].Name < ps[j].Name
 	})
-	return ps
-}
-
-func convertToPbParams(params []api.Parameter) []*fsmpb.Parameter {
-	ps := make([]*fsmpb.Parameter, len(params))
-	for i, p := range params {
-		ps[i] = &fsmpb.Parameter{Name: p.Name(), Type: p.Type()}
-	}
 	return ps
 }
 

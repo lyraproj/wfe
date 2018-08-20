@@ -54,10 +54,6 @@ func (c *GRPCGenesis) Apply(resources map[string]reflect.Value) map[string]refle
 	return shared.ExpandStringMap(c.call(shared.GenesisApplyId, reflect.ValueOf(resources)))
 }
 
-func (c *GRPCGenesis) Lookup(keys []string) map[string]reflect.Value {
-	return shared.ExpandStringMap(c.call(shared.GenesisLookupId, reflect.ValueOf(keys)))
-}
-
 func (c *GRPCGenesis) Notice(message string) {
 	err := c.stream.Send(&fsmpb.Message{Id: shared.GenesisNoticeId, Value: &datapb.Data{Kind: &datapb.Data_StringValue{StringValue: message}}})
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"github.com/puppetlabs/go-fsm/api"
 	"reflect"
 	"github.com/puppetlabs/go-fsm/fsmpb"
+	"github.com/puppetlabs/go-fsm/plugin/shared"
 )
 
 type remoteFunction struct {
@@ -14,7 +15,11 @@ type remoteFunction struct {
 }
 
 func NewRemoteAction(actors *GRPCActors, actorName string, action *fsmpb.Action) api.Action {
-	return api.NewAction(action.Name, &remoteFunction{actors: actors, actorName: actorName, actionName: action.Name}, convertFromPbParams(action.Input), convertFromPbParams(action.Output))
+	return api.NewAction(
+		action.Name,
+		&remoteFunction{actors: actors, actorName: actorName, actionName: action.Name},
+		shared.ConvertFromPbParams(action.Input),
+		shared.ConvertFromPbParams(action.Output))
 }
 
 func (pf *remoteFunction) Call(g api.Genesis, a api.Action, args map[string]reflect.Value) map[string]reflect.Value {
@@ -31,12 +36,4 @@ func (pf *remoteFunction) Call(g api.Genesis, a api.Action, args map[string]refl
 		panic(err)
 	}
 	return v
-}
-
-func convertFromPbParams(params []*fsmpb.Parameter) []api.Parameter {
-	ps := make([]api.Parameter, len(params))
-	for i, p := range params {
-		ps[i] = api.NewParameter(p.GetName(), p.GetType())
-	}
-	return ps
 }
