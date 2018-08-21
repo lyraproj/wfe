@@ -19,13 +19,13 @@ func NewGenesis(stream fsmpb.Actors_InvokeActionServer) api.Genesis {
 	return &GRPCGenesis{Context: stream.Context(), stream: stream}
 }
 
-func (c *GRPCGenesis) call(id int64, args reflect.Value) reflect.Value {
-	d, err := datapb.ToData(args)
+func (c *GRPCGenesis) call(id int64, args map[string]reflect.Value) map[string]reflect.Value {
+	d, err := datapb.ToDataHash(args)
 	if err != nil {
 		panic(err)
 	}
 
-	if err := c.stream.Send(&fsmpb.Message{Id: id, Value: d}); err != nil {
+	if err := c.stream.Send(&fsmpb.Message{Id: id, Value: &datapb.Data{&datapb.Data_HashValue{d}}}); err != nil {
 		panic(err)
 	}
 
@@ -35,23 +35,19 @@ func (c *GRPCGenesis) call(id int64, args reflect.Value) reflect.Value {
 		panic(err)
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
 	if resp.Id != id {
 		panic(fmt.Errorf("expected reply with id %d, got %d", id, resp.Id))
 	}
 
-	v, err := datapb.FromData(resp.GetValue())
+	v, err := datapb.FromDataHash(resp.GetValue().GetHashValue())
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func (c *GRPCGenesis) Apply(resources map[string]reflect.Value) map[string]reflect.Value {
-	return shared.ExpandStringMap(c.call(shared.GenesisApplyId, reflect.ValueOf(resources)))
+func (c *GRPCGenesis) Resource(r map[string]reflect.Value) map[string]reflect.Value {
+	return c.call(shared.GenesisResourceId, r)
 }
 
 func (c *GRPCGenesis) Notice(message string) {

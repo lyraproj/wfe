@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/hashicorp/go-plugin"
 	"github.com/puppetlabs/go-fsm/test/common"
 	"github.com/puppetlabs/go-fsm/plugin/server"
 	"github.com/puppetlabs/go-fsm/api"
 	"reflect"
-	"github.com/puppetlabs/go-fsm/fsm"
 )
 
 type OutA struct {
@@ -38,15 +36,19 @@ type InC struct {
 	F int64
 }
 
+type OutC struct {
+	R string
+}
+
 func main() {
-	actor := fsm.NewActorServer(context.Background(), `testing`, []api.Parameter{}, []api.Parameter{})
+	actor := api.NewActor(`testing`, nil, &OutC{})
 
 	actor.Action("a", func(g api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
 	})
 
 	actor.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
-		vs := g.Apply(map[string]reflect.Value{`a`: reflect.ValueOf(in.A + ` world`), `b`: reflect.ValueOf(in.B + 5)})
+		vs := g.Resource(map[string]reflect.Value{`a`: reflect.ValueOf(in.A + ` world`), `b`: reflect.ValueOf(in.B + 5)})
 		return &OutB1{vs[`a`].String(), vs[`b`].Int()}, nil
 	})
 
@@ -54,15 +56,14 @@ func main() {
 		return &OutB2{in.A + ` earth`, in.B + 8}, nil
 	})
 
-	actor.Action("c", func(g api.Genesis, in *InC) error {
-		fmt.Printf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)
-		return nil
+	actor.Action("c", func(g api.Genesis, in *InC) (*OutC, error) {
+		return &OutC{fmt.Sprintf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)}, nil
 	})
 
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: common.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"actors": server.NewActorsPlugin(map[string]api.Actor{`testing`: actor}),
+			"actors": server.NewActorsPlugin(actor),
 		},
 		GRPCServer: plugin.DefaultGRPCServer,
 	})

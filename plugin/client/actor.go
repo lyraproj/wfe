@@ -98,13 +98,13 @@ func (c *GRPCActors) InvokeAction(args *datapb.Data, genesis api.Genesis) (*data
 			stream.CloseSend()
 			return resp.GetValue(), nil
 
-		case shared.GenesisApplyId:
+		case shared.GenesisResourceId:
 			// Message intended for the Genesis service
 			v, err := datapb.FromDataHash(resp.GetValue().GetHashValue())
 			if err != nil {
 				return nil, err
 			}
-			d, err := datapb.ToData(reflect.ValueOf(genesis.Apply(v)))
+			d, err := datapb.ToData(reflect.ValueOf(genesis.Resource(v)))
 			if err != nil {
 				return nil, err
 			}

@@ -1,7 +1,7 @@
 package api
 
 type GoActorBuilder interface {
-	// Add a Go function as an action with the given name. The function
+	// Add a Go producerAction as an BasicAction with the given name. The producerAction
 	// must take a required Genesis parameter and an optional pointer
 	// to a struct as parameters. It must return a pointer to a struct
 	//

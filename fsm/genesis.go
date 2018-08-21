@@ -15,8 +15,9 @@ func NewGenesis(ctx context.Context) api.Genesis {
 	return &genesis{ctx}
 }
 
-func (g *genesis) Apply(resources map[string]reflect.Value) map[string]reflect.Value {
-	return resources
+func (g *genesis) Resource(r map[string]reflect.Value) map[string]reflect.Value {
+	// TODO: Really apply resource
+	return r
 }
 
 func (g *genesis) Notice(message string) {

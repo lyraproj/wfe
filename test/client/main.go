@@ -21,15 +21,24 @@ func main() {
 	log.SetOutput(ioutil.Discard)
 
 	// We're a host. Start by launching the plugin process.
-	// projectHome := os.Getenv("GOPATH") + `/src/github.com/puppetlabs/go-fsm`
+	projectHome := os.Getenv("GOPATH") + `/src/github.com/puppetlabs/go-fsm`
 	home := os.Getenv("HOME")
-	pClient := plugin.NewClient(&plugin.ClientConfig{
+	jsClient := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: common.Handshake,
 		Plugins:         PluginMap,
-		Cmd:             exec.Command(home + "/tools/node/bin/node", home + "/git/js-fsm/dist/examples/ec2_attachinternetgw.js"),//
-		// Cmd:             exec.Command(projectHome + "/test/bin/build_test_server"),
+		Cmd:             exec.Command(home + "/tools/node/bin/node", home + "/git/js-fsm/dist/examples/ec2_attachinternetgw.js"),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 	})
-	defer pClient.Kill()
-	fmt.Println(client.RunActor(`attach`, pClient, map[string]reflect.Value{}))
+	defer jsClient.Kill()
+	fmt.Println(client.RunActor(`attach`, jsClient, map[string]reflect.Value{}))
+
+	goClient := plugin.NewClient(&plugin.ClientConfig{
+		HandshakeConfig: common.Handshake,
+		Plugins:         PluginMap,
+		Cmd:             exec.Command(projectHome + "/test/bin/build_test_server"),
+		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
+	})
+	defer goClient.Kill()
+
+	fmt.Println(client.RunActor(`testing`, goClient, map[string]reflect.Value{}))
 }

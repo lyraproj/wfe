@@ -17,8 +17,6 @@ import (
 type ActorServer interface {
 	api.Actor
 
-	api.GoActorBuilder
-
 	AddAction(na api.Action)
 
 	// Validate ensures that all consumed values have a corresponding producer and that only
@@ -41,11 +39,7 @@ func (a *serverAction) Resolved() <-chan bool {
 }
 
 type actorServer struct {
-	context.Context
-	name string
-	input []api.Parameter
-	output []api.Parameter
-	actions map[string]api.Action
+	api.Actor
 
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
@@ -58,12 +52,9 @@ type actorServer struct {
 	graph        *simple.DirectedGraph
 }
 
-func NewActorServer(ctx context.Context, actorName string, input, output []api.Parameter) ActorServer {
+func NewActorServer(ctx context.Context, actorName string, input, output interface{}) ActorServer {
 	return &actorServer{
-		Context:  ctx,
-		name:     actorName,
-		input:    input,
-		output:   output,
+		Actor:    api.NewActor(actorName, input, output),
 		genesis:  NewGenesis(ctx),
 		runLatch: make(map[int64]bool),
 		values:   make(map[string]reflect.Value, 37),
@@ -120,30 +111,6 @@ func (s *actorServer) Validate() error {
 	return nil
 }
 
-func (s *actorServer) Input() []api.Parameter {
-	return s.input
-}
-
-func (s *actorServer) Output() []api.Parameter {
-	return s.output
-}
-
-func (s *actorServer) GetActions() map[string]api.Action {
-	return s.actions
-}
-
-func (s *actorServer) Name() string {
-	return s.name
-}
-
-func (s *actorServer) InvokeAction(actionName string, in map[string]reflect.Value, genesis api.Genesis) map[string]reflect.Value {
-	action, found := s.actions[actionName]
-	if !found {
-		panic(fmt.Errorf("no action with name '%s' in actor '%s'", actionName, s.name))
-	}
-	return action.Call(genesis, in)
-}
-
 func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[string]reflect.Value {
 	// Run all nodes that can run, i.e. root nodes
 	actions := s.graph.Nodes()
@@ -151,7 +118,7 @@ func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[st
 		return nil
 	}
 
-	params := s.input
+	params := s.Input()
 	args := make(map[string]reflect.Value, len(params))
 	s.valuesLock.RLock()
 	for _, param := range params {
@@ -165,7 +132,7 @@ func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[st
 			v, ok = s.lookupOne(lu.String())
 		}
 		if !ok {
-			panic(issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: s.name, `value`: n}, nil))
+			panic(issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: s.Name(), `value`: n}, nil))
 		}
 		args[n] = v
 	}
@@ -181,8 +148,8 @@ func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[st
 	}
 	<-s.done
 
-	result := make(map[string]reflect.Value, len(s.output))
-	for _, out := range s.output {
+	result := make(map[string]reflect.Value, len(s.Output()))
+	for _, out := range s.Output() {
 		n := out.Name()
 		result[n] = s.values[n]
 	}

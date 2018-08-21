@@ -87,7 +87,7 @@ func (ga *goActionCall) Call(g Genesis, a Action, args map[string]reflect.Value)
 	}
 	result := fv.Call(params)
 	expCount := 1
-	if len(a.Output()) > 1 {
+	if len(a.Output()) > 0 {
 		expCount++
 	}
 	rn := len(result)

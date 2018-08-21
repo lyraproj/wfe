@@ -35,8 +35,13 @@ func ExampleActorServer_Action() {
 		F int64
 	}
 
+	type OutC struct {
+		R string
+	}
+
 	// Run actions in process by adding actions directly to the actor server
-	as := NewActorServer(context.Background(), `test`, []api.Parameter{}, []api.Parameter{})
+	as := NewActorServer(context.Background(), `test`, nil, &OutC{})
+
 	as.Action("a", func(s api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
 	})
@@ -49,14 +54,13 @@ func ExampleActorServer_Action() {
 		return &OutB2{in.A + ` earth`, in.B + 8}, nil
 	})
 
-	as.Action("c", func(g api.Genesis, in *InC) error {
-		fmt.Printf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)
-		return nil
+	as.Action("c", func(g api.Genesis, in *InC) (*OutC, error) {
+		return &OutC{fmt.Sprintf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)}, nil
 	})
 
 	err := as.Validate()
 	if err == nil {
-		fmt.Println(as.Call(nil, map[string]reflect.Value{}))
+		fmt.Println(as.Call(nil, map[string]reflect.Value{})[`r`])
 	}
 	if err != nil {
 		fmt.Println(err)

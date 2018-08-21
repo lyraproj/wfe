@@ -19,8 +19,12 @@ type ActorsPlugin struct {
 	actors map[string]api.Actor
 }
 
-func NewActorsPlugin(actors map[string]api.Actor) *ActorsPlugin {
-	return &ActorsPlugin{actors}
+func NewActorsPlugin(actors ...api.Actor) *ActorsPlugin {
+	am := make(map[string]api.Actor, len(actors))
+	for _, a := range actors {
+		am[a.Name()] = a
+	}
+	return &ActorsPlugin{am}
 }
 
 func (a *ActorsPlugin) GetActor(name string) api.Actor {
@@ -53,7 +57,12 @@ type GRPCServer struct {
 }
 
 func (s *GRPCServer) GetActor(ctx context.Context, ar *fsmpb.ActorRequest) (*fsmpb.Actor, error) {
-	return &fsmpb.Actor{Actions: convertToPbActions(s.impl.GetActor(ar.GetName()).GetActions())}, nil
+	actor := s.impl.GetActor(ar.GetName())
+	return &fsmpb.Actor{
+		Actions: convertToPbActions(actor.GetActions()),
+		Input: shared.ConvertToPbParams(actor.Input()),
+		Output: shared.ConvertToPbParams(actor.Output()),
+  }, nil
 }
 
 func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error {
@@ -84,7 +93,6 @@ func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error 
 			}
 			rm[p.Key] = arg
 		}
-
 		rv := s.impl.GetActor(actorName).InvokeAction(actionName, rm, NewGenesis(stream))
 
 		ep = make([]*datapb.DataEntry, 0, len(rv))
