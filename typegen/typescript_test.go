@@ -10,7 +10,7 @@ import (
 	"fmt"
 )
 
-func ExampleReflector_typeSetFromReflect() {
+func ExampleGenerator_GenerateTypes() {
 	type Address struct {
 		Street string
 		Zip    string `puppet:"name=>zip_code"`
@@ -58,6 +58,17 @@ func ExampleReflector_typeSetFromReflect() {
 	//         this.street = street;
 	//         this.zip_code = zip_code;
 	//       }
+	//
+	//       __pvalue() : {[s: string]: any} {
+	//         let ih: {[s: string]: any} = {};
+	//         ih['street'] = this.street;
+	//         ih['zip_code'] = this.zip_code;
+	//         return ih;
+	//       }
+  //
+	//       __ptype() : string {
+	//         return 'My::Own::Address';
+	//       }
 	//     }
 	//
 	//     export class Person {
@@ -77,6 +88,18 @@ func ExampleReflector_typeSetFromReflect() {
 	//         this.name = name;
 	//         this.sex = sex;
 	//         this.address = address;
+	//       }
+	//
+	//       __pvalue() : {[s: string]: any} {
+	//         let ih: {[s: string]: any} = {};
+	//         ih['name'] = this.name;
+	//         ih['sex'] = this.sex;
+	//         ih['address'] = this.address;
+	//         return ih;
+	//       }
+  //
+	//       __ptype() : string {
+	//         return 'My::Own::Person';
 	//       }
 	//     }
 	//
@@ -100,6 +123,18 @@ func ExampleReflector_typeSetFromReflect() {
 	//         super({name: name, sex: sex, address: address});
 	//         this.enabled = enabled;
 	//         this.age = age;
+	//       }
+  //
+	//       __pvalue() : {[s: string]: any} {
+	//         let ih = super.__pvalue();
+	//         ih['enabled'] = this.enabled;
+	//         if(this.age !== null)
+	//           ih['age'] = this.age;
+	//         return ih;
+	//       }
+  //
+	//       __ptype() : string {
+	//         return 'My::Own::ExtendedPerson';
 	//       }
 	//     }
 	//   }

@@ -66,6 +66,10 @@ func (g *tsGenerator) GenerateType(t eval.PType, ns []string, indent int, bld *b
 		appendFields(thisAttrs, indent, bld)
 		bld.WriteByte('\n')
 		appendConstructor(allAttrs, thisAttrs, superAttrs, indent, bld)
+		bld.WriteByte('\n')
+		appendPValueGetter(len(superAttrs) > 0, thisAttrs, indent, bld)
+		bld.WriteByte('\n')
+		appendPTypeGetter(pt.Name(), indent, bld)
 		indent -= 2
 		newLine(indent, bld)
 		bld.WriteByte('}')
@@ -147,7 +151,56 @@ func appendConstructor(allAttrs, thisAttrs, superAttrs []*tsAttribute, indent in
 	indent -= 2
 	newLine(indent, bld)
 	bld.WriteByte('}')
+}
+
+func appendPValueGetter(hasSuper bool, thisAttrs []*tsAttribute, indent int, bld *bytes.Buffer) {
+	newLine(indent, bld)
+	bld.WriteString(`__pvalue() : {[s: string]: any} {`)
+	indent += 2
+	newLine(indent, bld)
+	if hasSuper {
+		bld.WriteString(`let ih = super.__pvalue();`)
+	} else {
+		bld.WriteString(`let ih: {[s: string]: any} = {};`)
+	}
+	for _, attr := range thisAttrs {
+		newLine(indent, bld)
+		if attr.value != `` {
+			bld.WriteString(`if(this.`)
+			bld.WriteString(attr.name)
+			bld.WriteString(` !== `)
+			bld.WriteString(attr.value)
+			bld.WriteString(`)`)
+			indent += 2
+			newLine(indent, bld)
+		}
+		bld.WriteString(`ih['`)
+		bld.WriteString(attr.name)
+		bld.WriteString(`'] = this.`)
+		bld.WriteString(attr.name)
+		bld.WriteString(`;`)
+		if attr.value != `` {
+			indent -= 2
+		}
+	}
+	newLine(indent, bld)
+	bld.WriteString(`return ih;`)
 	indent -= 2
+	newLine(indent, bld)
+	bld.WriteByte('}')
+}
+
+func appendPTypeGetter(name string, indent int, bld *bytes.Buffer) {
+	newLine(indent, bld)
+	bld.WriteString(`__ptype() : string {`)
+	indent += 2
+	newLine(indent, bld)
+	bld.WriteString(`return '`)
+	bld.WriteString(name)
+	bld.WriteString(`';`)
+	indent -= 2
+	newLine(indent, bld)
+	bld.WriteByte('}')
 }
 
 func appendParameters(params []*tsAttribute, indent int, bld *bytes.Buffer) {
