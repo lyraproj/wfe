@@ -63,6 +63,22 @@ func NewActorServer(ctx context.Context, actorName string, input, output interfa
 		done:     make(chan bool)}
 }
 
+func NewActorServer2(ctx context.Context, actor api.Actor) ActorServer {
+	as := &actorServer{
+		Actor:    actor,
+		genesis:  NewGenesis(ctx),
+		runLatch: make(map[int64]bool),
+		values:   make(map[string]reflect.Value, 37),
+		graph:    simple.NewDirectedGraph(),
+		inbox:    make(chan *serverAction, 20),
+		done:     make(chan bool)}
+
+  for _, a := range actor.GetActions() {
+  	as.AddAction(a)
+  }
+	return as
+}
+
 func (s *actorServer) Action(name string, function interface{}) {
 	s.AddAction(api.NewGoAction(name, function))
 }
@@ -78,7 +94,7 @@ func (s *actorServer) AddAction(na api.Action) {
 		for _, ra := range a.Output() {
 			for _, rb := range na.Output() {
 				if ra.Name() == rb.Name() {
-					panic(issue.NewReported(GENESIS_MULTIPLE_PRODUCERS_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`name1`: k, `name2`: na.Name(), `value`: ra.Name}, nil))
+					panic(issue.NewReported(GENESIS_MULTIPLE_PRODUCERS_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`name1`: k, `name2`: na.Name(), `value`: ra.Name()}, nil))
 				}
 			}
 		}
@@ -91,6 +107,13 @@ func (s *actorServer) Validate() error {
 	// Build a map that associates a produced value with the producer of that value
 	actions := s.graph.Nodes()
 	valueProducers := make(map[string]api.Action, len(actions)*5)
+
+	for _, param := range s.Input() {
+		if param.Lookup() != nil {
+			valueProducers[param.Name()] = s
+		}
+	}
+
 	for _, a := range actions {
 		fa := a.(api.Action)
 		for _, r := range fa.Output() {
@@ -119,7 +142,6 @@ func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[st
 	}
 
 	params := s.Input()
-	args := make(map[string]reflect.Value, len(params))
 	s.valuesLock.RLock()
 	for _, param := range params {
 		n := param.Name()
@@ -134,7 +156,7 @@ func (s *actorServer) Call(g api.Genesis, input map[string]reflect.Value) map[st
 		if !ok {
 			panic(issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: s.Name(), `value`: n}, nil))
 		}
-		args[n] = v
+		s.values[n] = v
 	}
 	s.valuesLock.RUnlock()
 
@@ -172,10 +194,12 @@ func (s *actorServer) dependents(a api.Action, valueProducers map[string]api.Act
 	for _, param := range a.Input() {
 		if param.Lookup() == nil {
 			if vp, found := valueProducers[param.Name()]; found {
-				dam[vp.Name()] = vp
+				if vp != s {
+					dam[vp.Name()] = vp
+				}
 				continue
 			}
-			return nil, issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: a.Name(), `value`: param.Name}, nil)
+			return nil, issue.NewReported(GENESIS_NO_PRODUCER_OF_VALUE, issue.SEVERITY_ERROR, issue.H{`action`: a.Name(), `value`: param.Name()}, nil)
 		}
 	}
 	da := make([]api.Action, 0, len(dam))

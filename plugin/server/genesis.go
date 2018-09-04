@@ -56,3 +56,7 @@ func (c *GRPCGenesis) Notice(message string) {
 		panic(err)
 	}
 }
+
+func (c *GRPCGenesis) ParentContext() context.Context {
+	return c.Context
+}

@@ -19,7 +19,7 @@ func NewGoAction(name string, function interface{}) Action {
 	ar := reflect.TypeOf(function)
 	if ar.Kind() != reflect.Func {
 		_, file, line, _ := runtime.Caller(1)
-		panic(issue.NewReported(`GENESIS_ACTION_NOT_FUNCTION`, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: ar.String()}, issue.NewLocation(file, line, 0)))
+		panic(issue.NewReported(GENESIS_ACTION_NOT_FUNCTION, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: ar.String()}, issue.NewLocation(file, line, 0)))
 	}
 
 	inc := ar.NumIn()
@@ -114,7 +114,7 @@ func (ga *goActionCall) Call(g Genesis, a Action, args map[string]reflect.Value)
 		rs = rs.Elem()
 	}
 	if rt.Kind() != reflect.Struct {
-		panic(issue.NewReported(GENESIS_ACTION_BAD_RETURN, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `type`: rt.String()}, nil))
+		panic(issue.NewReported(GENESIS_ACTION_NOT_STRUCT, issue.SEVERITY_ERROR, issue.H{`name`: a.Name(), `type`: rt.String()}, nil))
 	}
 	fc := rt.NumField()
 	rm := make(map[string]reflect.Value, fc)

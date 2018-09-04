@@ -11,4 +11,6 @@ type Genesis interface {
 	Resource(map[string]reflect.Value) map[string]reflect.Value
 
 	Notice(message string)
+
+	ParentContext() context.Context
 }
