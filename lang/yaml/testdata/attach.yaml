@@ -1,0 +1,66 @@
+ attach:
+   typespace: genesis::aws
+   input:
+     region:
+       type: String
+       lookup: aws.region
+     tags:
+       type: Hash[String,String]
+       lookup: aws.tags
+     key_name:
+       type: String
+       lookup: aws.keyname
+     ec2_cnt:
+       type: Integer
+       lookup: aws.instance.count
+   output:
+     vpc_id: String
+     subnet_id: String
+     internet_gateway_id: String
+     nodes: Hash[String,Struct[public_ip=>String,private_ip=>String]]
+   activities:
+     vpc:
+       input: [region, tags]
+       output: [vpc_id]
+       state:
+         ensure              : present
+         region              : !ref region
+         cidr_block          : 192.168.0.0/16
+         tags                : !ref tags
+         enable_dns_hostnames: true
+         enable_dns_support  : true
+     subnet:
+       input: [region, tags, vpc_id]
+       output: [subnet_id]
+       state:
+         ensure                 : present
+         region                 : !ref region
+         vpc_id                 : !ref vpc_id
+         cidr_block             : 192.168.1.0/24
+         tags                   : !ref tags
+         map_public_ip_on_launch: true
+     instance:
+       input: [n, region, key_name, tags]
+       output:
+         key: instance_id
+         value: [public_ip, private_ip]
+       iterator:
+         name:     nodes
+         function: times
+         over:     [ec2_cnt]
+         vars:     [n]
+       state:
+         region       : !ref region
+         ensure       : present
+         instance_id  : !ref n
+         image_id     : ami-f90a4880
+         instance_type: t2.nano
+         key_name     : !ref key_name
+         tags         : !ref tags
+     gw:
+       input: [region, tags]
+       output: [internet_gateway_id]
+       state:
+         ensure: present
+         region: !ref region
+         tags  : !ref tags

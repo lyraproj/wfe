@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-plugin"
 	"github.com/puppetlabs/go-fsm/test/common"
-	"github.com/puppetlabs/go-fsm/plugin/server"
+	"github.com/puppetlabs/go-fsm/lang/rpc/server"
 	"github.com/puppetlabs/go-fsm/api"
-	"reflect"
+	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-evaluator/types"
 )
 
 type OutA struct {
@@ -41,24 +42,24 @@ type OutC struct {
 }
 
 func main() {
-	actor := api.NewActor(`testing`, nil, &OutC{})
+	actor := api.NewWorkflow(`testing`, nil, &OutC{})
 
 	actor.Action("a", func(g api.Genesis) (*OutA, error) {
 		return &OutA{`hello`, 4}, nil
-	})
+	}, nil)
 
 	actor.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
-		vs := g.Resource(map[string]reflect.Value{`a`: reflect.ValueOf(in.A + ` world`), `b`: reflect.ValueOf(in.B + 5)})
-		return &OutB1{vs[`a`].String(), vs[`b`].Int()}, nil
-	})
+		vs := g.Resource(eval.Wrap(map[string]interface{}{`a`: in.A + ` world`, `b`: in.B + 5}).(eval.KeyedValue))
+		return &OutB1{vs.Get5(`a`, eval.UNDEF).String(), vs.Get5(`b`, eval.UNDEF).(*types.IntegerValue).Int()}, nil
+	}, nil)
 
 	actor.Action("b2", func(g api.Genesis, in *InB) (*OutB2, error) {
 		return &OutB2{in.A + ` earth`, in.B + 8}, nil
-	})
+	}, nil)
 
 	actor.Action("c", func(g api.Genesis, in *InC) (*OutC, error) {
 		return &OutC{fmt.Sprintf("%s, %d, %s, %d\n", in.C, in.D, in.E, in.F)}, nil
-	})
+	}, nil)
 
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: common.Handshake,

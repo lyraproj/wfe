@@ -1,0 +1,40 @@
+syntax = "proto3";
+package puppet.fsm;
+
+import "datapb/data.proto";
+
+option go_package = "github.com/puppetlabs/go-fsm/fsmpb";
+
+message Parameter {
+  string name = 1;
+  string type = 2;
+  puppet.datapb.Data lookup = 3;
+}
+
+message ActorRequest {
+  string name = 1;
+}
+
+message Actor {
+  repeated Action actions = 1;
+  repeated Parameter input = 2;
+  repeated Parameter output = 3;
+}
+
+message Action {
+  string name = 1;
+  puppet.datapb.Data iterate = 2;
+  repeated Parameter input = 3;
+  repeated Parameter output = 4;
+}
+
+message Message {
+  int64 id = 1;
+  puppet.datapb.Data value = 2;
+}
+
+service Actors {
+  rpc GetActor (ActorRequest) returns (Actor) {};
+
+  rpc InvokeAction (stream Message) returns (stream Message) {};
+}
