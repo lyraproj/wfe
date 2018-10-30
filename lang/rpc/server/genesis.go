@@ -1,17 +1,17 @@
 package server
 
 import (
-	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
-	"github.com/puppetlabs/data-protobuf/datapb"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-fsm/lang/rpc/shared"
 	"fmt"
+	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/proto"
+	"github.com/puppetlabs/go-fsm/api"
+	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
+	"github.com/puppetlabs/go-fsm/lang/rpc/shared"
 )
 
 type GRPCGenesis struct {
-	ctx eval.Context
+	ctx    eval.Context
 	stream fsmpb.Actors_InvokeActionServer
 }
 
@@ -19,7 +19,7 @@ func NewGenesis(ctx eval.Context, stream fsmpb.Actors_InvokeActionServer) api.Ge
 	return &GRPCGenesis{ctx: ctx, stream: stream}
 }
 
-func (c *GRPCGenesis) call(id int64, args eval.KeyedValue) eval.KeyedValue {
+func (c *GRPCGenesis) call(id int64, args eval.OrderedMap) eval.OrderedMap {
 	d := proto.ToPBData(args)
 	if err := c.stream.Send(&fsmpb.Message{Id: id, Value: d}); err != nil {
 		panic(err)
@@ -35,10 +35,10 @@ func (c *GRPCGenesis) call(id int64, args eval.KeyedValue) eval.KeyedValue {
 		panic(fmt.Errorf("expected reply with id %d, got %d", id, resp.Id))
 	}
 
-	return proto.FromPBData(resp.GetValue()).(eval.KeyedValue)
+	return proto.FromPBData(resp.GetValue()).(eval.OrderedMap)
 }
 
-func (c *GRPCGenesis) Resource(r eval.KeyedValue) eval.KeyedValue {
+func (c *GRPCGenesis) Resource(r eval.OrderedMap) eval.OrderedMap {
 	return c.call(shared.GenesisResourceId, r)
 }
 

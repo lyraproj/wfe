@@ -129,11 +129,11 @@ func ExampleActivity_failValiation() {
 	// Output: activity 'c' value 'e' is never produced
 }
 
-var sampleData = map[string]eval.PValue{
+var sampleData = map[string]eval.Value{
 	`L`: types.WrapString(`value of L`),
 }
 
-func provider(c lookup.Context, key string, _ eval.KeyedValue) eval.PValue {
+func provider(c lookup.Context, key string, _ eval.OrderedMap) eval.Value {
 	if v, ok := sampleData[key]; ok {
 		return v
 	}

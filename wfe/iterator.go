@@ -14,8 +14,8 @@ const maxParallel = 100
 
 type iterator struct {
 	api.Activity
-	over      []eval.Parameter
-	variables []eval.Parameter
+	over       []eval.Parameter
+	variables  []eval.Parameter
 	resultName string
 }
 
@@ -76,7 +76,7 @@ func (it *iterator) Variables() []eval.Parameter {
 	return it.variables
 }
 
-func (it *iterator) iterateRange(ctx eval.Context, vars eval.KeyedValue, start, end int64) eval.KeyedValue {
+func (it *iterator) iterateRange(ctx eval.Context, vars eval.OrderedMap, start, end int64) eval.OrderedMap {
 
 	done := make(chan bool)
 	count := end - start
@@ -113,9 +113,9 @@ func (it *iterator) iterateRange(ctx eval.Context, vars eval.KeyedValue, start, 
 	return types.SingletonHash2(it.resultName, types.WrapHash(entries))
 }
 
-func resolveInput(c eval.Context, it api.Iterator, input eval.KeyedValue) ([]eval.PValue, eval.KeyedValue) {
+func resolveInput(c eval.Context, it api.Iterator, input eval.OrderedMap) ([]eval.Value, eval.OrderedMap) {
 	// Resolve the parameters that acts as input to the iteration.
-	over := make([]eval.PValue, len(it.Over()))
+	over := make([]eval.Value, len(it.Over()))
 	vars := make([]*types.HashEntry, 0, len(it.Input())-len(it.Over()))
 
 	for i, o := range it.Over() {
@@ -183,7 +183,7 @@ nextVar:
 	}
 }
 
-func assertInt(t api.Iterator, arg eval.PValue, paramIdx int) int64 {
+func assertInt(t api.Iterator, arg eval.Value, paramIdx int) int64 {
 	iv, ok := arg.(*types.IntegerValue)
 	if !ok {
 		panic(eval.Error(WF_ITERATION_PARAMETER_WRONG_TYPE, issue.H{
@@ -214,7 +214,7 @@ func (t *times) IterationStyle() api.IterationStyle {
 	return api.IterationStyleTimes
 }
 
-func (t *times) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
+func (t *times) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	over, vars := resolveInput(ctx, t, input)
 	return t.iterateRange(ctx, vars, 0, assertInt(t, over[0], 0))
 }
@@ -237,7 +237,7 @@ func (t *itRange) IterationStyle() api.IterationStyle {
 	return api.IterationStyleRange
 }
 
-func (t *itRange) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
+func (t *itRange) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	over, vars := resolveInput(ctx, t, input)
 	return t.iterateRange(ctx, vars, assertInt(t, over[0], 0), assertInt(t, over[1], 1))
 }

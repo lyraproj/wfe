@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/go-plugin"
+	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-evaluator/proto"
 	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
-	"google.golang.org/grpc"
-	"net/rpc"
-	"io"
 	"github.com/puppetlabs/go-fsm/lang/rpc/shared"
+	"google.golang.org/grpc"
+	"io"
+	"net/rpc"
 	"sort"
-	"github.com/puppetlabs/go-evaluator/proto"
-	"github.com/puppetlabs/go-evaluator/eval"
 
 	// Ensure that Puppet is initialized
 	_ "github.com/puppetlabs/go-evaluator/pcore"
@@ -63,9 +63,9 @@ func (s *GRPCServer) GetActor(ctx context.Context, ar *fsmpb.ActorRequest) (*fsm
 	actor := s.impl.GetActor(ar.GetName())
 	return &fsmpb.Actor{
 		Actions: convertToPbActions(actor.GetActivities()),
-		Input: shared.ConvertToPbParams(actor.Input()),
-		Output: shared.ConvertToPbParams(actor.Output()),
-  }, nil
+		Input:   shared.ConvertToPbParams(actor.Input()),
+		Output:  shared.ConvertToPbParams(actor.Output()),
+	}, nil
 }
 
 func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error {
@@ -87,7 +87,7 @@ func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error 
 		actorName := da.Values[0].GetStringValue()
 		actionName := da.Values[1].GetStringValue()
 
-		rm := proto.FromPBData(da.Values[2]).(eval.KeyedValue)
+		rm := proto.FromPBData(da.Values[2]).(eval.OrderedMap)
 		rv := s.impl.GetActor(actorName).InvokeActivity(actionName, rm, NewGenesis(eval.Puppet.RootContext(), stream))
 		result := proto.ToPBData(rv)
 
@@ -109,4 +109,3 @@ func convertToPbActions(actions map[string]api.Activity) []*fsmpb.Action {
 	})
 	return ps
 }
-

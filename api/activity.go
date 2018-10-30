@@ -30,8 +30,14 @@ type Activity interface {
 
 	// Output returns the definition of that this Activity will produce
 	Output() []eval.Parameter
+}
+
+type RunnableActivity interface {
+	Activity
 
 	// Run will execute this Activity. The given input must match the declared Input. It will return
 	// a value that corresponds to the Output declaration.
-	Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue
+	//
+	// The Scope of the given eval.Context must contain an ActivityContext named "genesis::context" prior to this call.
+	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 }

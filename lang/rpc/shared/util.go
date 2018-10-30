@@ -1,12 +1,12 @@
 package shared
 
 import (
-	"reflect"
-	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
-	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/proto"
+	"github.com/puppetlabs/go-fsm/api"
+	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
+	"reflect"
 )
 
 func ExpandStringMap(sr reflect.Value) map[string]reflect.Value {
@@ -22,7 +22,7 @@ func ConvertFromPbParams(params []*fsmpb.Parameter) []eval.Parameter {
 	ps := make([]eval.Parameter, len(params))
 	for i, p := range params {
 		ld := p.GetLookup()
-		var lookup eval.PValue
+		var lookup eval.Value
 		if ld != nil {
 			lookup = proto.FromPBData(ld)
 		}
@@ -39,7 +39,7 @@ func ConvertToPbParams(params []eval.Parameter) []*fsmpb.Parameter {
 	return ps
 }
 
-func ConvertIterate(def *datapb.Data) eval.PValue {
+func ConvertIterate(def *datapb.Data) eval.Value {
 	if def != nil {
 		return proto.FromPBData(def)
 	}

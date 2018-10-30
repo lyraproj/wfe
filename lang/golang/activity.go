@@ -72,7 +72,7 @@ func badActionFunction(name string, typ reflect.Type) error {
 	return issue.NewReported(WF_BAD_FUNCTION, issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: typ.String()}, issue.NewLocation(file, line, 0))
 }
 
-func (g *goActivity) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
+func (g *goActivity) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	fv := reflect.ValueOf(g.function)
 	fvType := fv.Type()
 

@@ -59,7 +59,7 @@ func (a *activity) ToString(bld io.Writer, format eval.FormatContext, g eval.RDe
 	io.WriteString(bld, a.Name())
 }
 
-func (a *activity) Type() eval.PType {
+func (a *activity) Type() eval.Type {
 	return a.signature
 }
 
@@ -89,7 +89,7 @@ func init() {
 	}
 }
 
-func (a *activity) Call(c eval.Context, block eval.Lambda, args ...eval.PValue) eval.PValue {
+func (a *activity) Call(c eval.Context, block eval.Lambda, args ...eval.Value) eval.Value {
 	names := a.signature.ParameterNames()
 	entries := make([]*types.HashEntry, len(args))
 	for i, arg := range args {
@@ -98,11 +98,11 @@ func (a *activity) Call(c eval.Context, block eval.Lambda, args ...eval.PValue) 
 	return a.CallNamed(c, block, types.WrapHash(entries))
 }
 
-func (a *activity) CallNamed(c eval.Context, block eval.Lambda, args eval.KeyedValue) eval.PValue {
+func (a *activity) CallNamed(c eval.Context, block eval.Lambda, args eval.OrderedMap) eval.Value {
 	return a.Run(c, args)
 }
 
-func (a *activity) Run(c eval.Context, args eval.KeyedValue) eval.KeyedValue {
+func (a *activity) Run(c eval.Context, args eval.OrderedMap) eval.OrderedMap {
 	return a.activity.Run(c, args)
 }
 
@@ -134,7 +134,7 @@ func (a *activity) Resolve(c eval.Context) {
 	case parser.ActivityStyleWorkflow:
 		activity = wfe.NewWorkflow(name, input, output, a.getWhen(), a.getActivities(c)...)
 	case parser.ActivityStyleAction:
-		activity = wfe.Action2(name, a.getFunction(c, name, input, signature), input, output, a.getWhen())
+		activity = wfe.Action(name, a.getCRD(c, name, input, signature), input, output, a.getWhen())
 	case parser.ActivityStyleResource:
 		extId, _ := a.getStringProperty(`external_id`)
 		activity = wfe.Resource(c, name, a.getResourceType(c), a.getState(c), extId, input, output, a.getWhen())
@@ -228,7 +228,7 @@ func (a *activity) getActivities(c eval.Context) []api.Activity {
 		} else if fn, ok := stmt.(*parser.FunctionDefinition); ok {
 			fn := impl.NewPuppetFunction(fn)
 			fn.Resolve(c)
-			acs[i] = wfe.Action(c, fn, nil)
+			acs[i] = wfe.Stateless(c, fn, nil)
 		} else {
 			panic(eval.Error(WF_NOT_ACTIVITY, issue.H{`actual`: stmt}))
 		}
@@ -236,7 +236,7 @@ func (a *activity) getActivities(c eval.Context) []api.Activity {
 	return acs
 }
 
-func (a *activity) getFunction(c eval.Context, name string, input []eval.Parameter, signature *types.CallableType) eval.InvocableValue {
+func (a *activity) getCRD(c eval.Context, name string, input []eval.Parameter, signature *types.CallableType) api.CRD {
 	de := a.expression.Definition()
 	if de == nil {
 		panic(c.Error(a.expression, WF_NO_DEFINITION, issue.NO_ARGS))
@@ -247,8 +247,7 @@ func (a *activity) getFunction(c eval.Context, name string, input []eval.Paramet
 		panic(c.Error(de, WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
-
-	var fs map[string]eval.InvocableValue
+	var fs map[api.Operation]eval.InvocableValue
 	hasFunctions := false
 	for _, e := range block.Statements() {
 		if _, ok = e.(*parser.FunctionDefinition); ok {
@@ -258,24 +257,24 @@ func (a *activity) getFunction(c eval.Context, name string, input []eval.Paramet
 	}
 	if hasFunctions {
 		// Block must only consist of functions the functions create, read, update, and delete.
-		fs = make(map[string]eval.InvocableValue, len(block.Statements()))
+		fs = make(map[api.Operation]eval.InvocableValue, len(block.Statements()))
 		for _, e := range block.Statements() {
 			if fd, ok := e.(*parser.FunctionDefinition); ok {
 				switch fd.Name() {
 				case `create`, `read`, `update`, `delete`:
 					f := impl.NewPuppetFunction(fd)
 					f.Resolve(c)
-					fs[fd.Name()] = f
+					fs[api.NewOperation(fd.Name())] = f
 					continue
 				}
 			}
 			panic(c.Error(e, WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Function create, read, update, or delete`, `actual`: fs}))
 		}
 	} else {
-		fs = map[string]eval.InvocableValue{`read`: NewInvocableBlock(name, a.Input(), signature, block)}
+		fs = map[api.Operation]eval.InvocableValue{api.Read: NewInvocableBlock(name, a.Input(), signature, block)}
 	}
 
-	return NewActionBlock(name, fs)
+	return NewCRD(name, input, fs)
 }
 
 func (a *activity) getWhen() api.Condition {
@@ -301,7 +300,7 @@ func (a *activity) extractParameters(props *types.HashValue, field string, dflt 
 	}
 
 	params := make([]eval.Parameter, ia.Len())
-	ia.EachWithIndex(func(v eval.PValue, i int) {
+	ia.EachWithIndex(func(v eval.Value, i int) {
 		if p, ok := v.(eval.Parameter); ok {
 			params[i] = p
 		} else {
@@ -311,7 +310,7 @@ func (a *activity) extractParameters(props *types.HashValue, field string, dflt 
 	return params
 }
 
-func (a *activity) getState(c eval.Context) eval.KeyedValue {
+func (a *activity) getState(c eval.Context) eval.OrderedMap {
 	de := a.expression.Definition()
 	if de == nil {
 		return eval.EMPTY_MAP
@@ -319,7 +318,7 @@ func (a *activity) getState(c eval.Context) eval.KeyedValue {
 
 	if hash, ok := de.(*parser.LiteralHash); ok {
 		// Transform all variable references to Deferred expressions
-		return eval.Evaluate(c, hash).(eval.KeyedValue)
+		return eval.Evaluate(c, hash).(eval.OrderedMap)
 	}
 	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }

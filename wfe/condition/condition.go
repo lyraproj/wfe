@@ -28,7 +28,7 @@ func (b boolean) Precedence() int {
 	return 5
 }
 
-func (b boolean) IsTrue(input eval.KeyedValue) bool {
+func (b boolean) IsTrue(input eval.OrderedMap) bool {
 	return bool(b)
 }
 
@@ -44,7 +44,7 @@ func Truthy(name string) api.Condition {
 	return truthy(name)
 }
 
-func (v truthy) IsTrue(input eval.KeyedValue) bool {
+func (v truthy) IsTrue(input eval.OrderedMap) bool {
 	value, ok := input.Get4(string(v))
 	return ok && eval.IsTruthy(value)
 }
@@ -71,7 +71,7 @@ type not struct {
 	condition api.Condition
 }
 
-func (n *not) IsTrue(input eval.KeyedValue) bool {
+func (n *not) IsTrue(input eval.OrderedMap) bool {
 	return !n.condition.IsTrue(input)
 }
 
@@ -99,7 +99,7 @@ func And(conditions []api.Condition) api.Condition {
 	return &and{conditions}
 }
 
-func (a *and) IsTrue(input eval.KeyedValue) bool {
+func (a *and) IsTrue(input eval.OrderedMap) bool {
 	for _, condition := range a.conditions {
 		if !condition.IsTrue(input) {
 			return false
@@ -130,7 +130,7 @@ type or struct {
 	conditions []api.Condition
 }
 
-func (o *or) IsTrue(input eval.KeyedValue) bool {
+func (o *or) IsTrue(input eval.OrderedMap) bool {
 	for _, condition := range o.conditions {
 		if condition.IsTrue(input) {
 			return true

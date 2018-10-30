@@ -18,9 +18,9 @@ type Activity struct {
 	output []eval.Parameter
 }
 
-func ActivityContext(c eval.Context) eval.KeyedValue {
+func ActivityContext(c eval.Context) eval.OrderedMap {
 	if ac, ok := c.Scope().Get(`genesis::context`); ok {
-		return eval.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac).(eval.KeyedValue)
+		return eval.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac).(eval.OrderedMap)
 	}
 	panic(eval.Error(api.WF_NO_ACTIVITY_CONTEXT, issue.NO_ARGS))
 }
@@ -74,7 +74,7 @@ func (a *Activity) Identifier() string {
 	return `genesis://puppet.com/` + a.Style() + `/` + url.PathEscape(a.name)
 }
 
-func ResolveInput(ctx eval.Context, a api.Activity, input eval.KeyedValue, p eval.Parameter) eval.PValue {
+func ResolveInput(ctx eval.Context, a api.Activity, input eval.OrderedMap, p eval.Parameter) eval.Value {
 	v := p.Value()
 	if v == nil {
 		var ok bool

@@ -31,7 +31,7 @@ func ParamsFromStruct(ctx eval.Context, name string, ptr reflect.Type) []eval.Pa
 			for i := 0; i < outCount; i++ {
 				fld := s.Field(i)
 				name, decl := r.ReflectFieldTags(&fld)
-				params[i] = impl.NewParameter(name, decl.Get5(`type`, types.DefaultAnyType()).(eval.PType), decl.Get5(`value`, nil), false)
+				params[i] = impl.NewParameter(name, decl.Get5(`type`, types.DefaultAnyType()).(eval.Type), decl.Get5(`value`, nil), false)
 			}
 			return params
 		}

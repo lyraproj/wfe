@@ -22,6 +22,7 @@ const (
 	WF_TOO_MANY_GUARDS                   = `WF_TOO_MANY_GUARDS`
 	WF_UNABLE_TO_REFLECT_TYPE            = `WF_UNABLE_TO_REFLECT_TYPE`
 	WF_OUTPUT_NOT_STRUCT                 = `WF_OUTPUT_NOT_STRUCT`
+	WF_MISSING_REQUIRED_BLOCK            = `WF_MISSING_REQUIRED_BLOCK`
 )
 
 func init() {
@@ -45,4 +46,5 @@ func init() {
 	issue.Hard2(WF_TOO_MANY_GUARDS, `%{activity} is too complex. Expected %{max} guards maximum. Have %{actual}`, issue.HF{`activity`: issue.Label})
 	issue.Hard2(WF_PARAMETER_UNRESOLVED, `%{activity}, parameter %{parameter} cannot be resolved`, issue.HF{`activity`: issue.Label})
 	issue.Hard(WF_OUTPUT_NOT_STRUCT, `expected activity to return a struct, got %{type}`)
+	issue.Hard(WF_MISSING_REQUIRED_BLOCK, `action %{name} is missing required block %{block}`)
 }

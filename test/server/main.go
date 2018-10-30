@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/hashicorp/go-plugin"
-	"github.com/puppetlabs/go-fsm/test/common"
-	"github.com/puppetlabs/go-fsm/lang/rpc/server"
-	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/types"
+	"github.com/puppetlabs/go-fsm/api"
+	"github.com/puppetlabs/go-fsm/lang/rpc/server"
+	"github.com/puppetlabs/go-fsm/test/common"
 )
 
 type OutA struct {
@@ -49,7 +49,7 @@ func main() {
 	}, nil)
 
 	actor.Action("b1", func(g api.Genesis, in *InB) (*OutB1, error) {
-		vs := g.Resource(eval.Wrap(map[string]interface{}{`a`: in.A + ` world`, `b`: in.B + 5}).(eval.KeyedValue))
+		vs := g.Resource(eval.Wrap(map[string]interface{}{`a`: in.A + ` world`, `b`: in.B + 5}).(eval.OrderedMap))
 		return &OutB1{vs.Get5(`a`, eval.UNDEF).String(), vs.Get5(`b`, eval.UNDEF).(*types.IntegerValue).Int()}, nil
 	}, nil)
 

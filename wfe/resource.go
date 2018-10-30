@@ -10,12 +10,12 @@ import (
 
 type resource struct {
 	Activity
-	typ eval.ObjectType
+	typ   eval.ObjectType
 	extId string
-	state eval.KeyedValue
+	state eval.OrderedMap
 }
 
-func Resource(c eval.Context, n string, resourceType eval.ObjectType, state eval.KeyedValue, externalId string, input, output []eval.Parameter, w api.Condition) api.Activity {
+func Resource(c eval.Context, n string, resourceType eval.ObjectType, state eval.OrderedMap, externalId string, input, output []eval.Parameter, w api.Condition) api.Activity {
 	r := &resource{typ: resourceType, state: state, extId: externalId}
 	r.Init(n, input, output, w)
 	return r
@@ -30,10 +30,10 @@ func (r *resource) Identifier() string {
 	return r.Activity.Identifier() + `?` + vs.Encode()
 }
 
-func (r *resource) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
-	return ctx.Scope().WithLocalScope(func() (v eval.PValue) {
+func (r *resource) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
+	return ctx.Scope().WithLocalScope(func() (v eval.Value) {
 		scope := ctx.Scope()
-		input.EachPair(func(k, v eval.PValue) {
+		input.EachPair(func(k, v eval.Value) {
 			scope.Set(k.String(), v)
 		})
 		resolvedState := types.ResolveDeferred(ctx, r.state)
@@ -45,7 +45,7 @@ func (r *resource) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue 
 			entries[i] = r.getValue(o, newState)
 		}
 		return types.WrapHash(entries)
-	}).(eval.KeyedValue)
+	}).(eval.OrderedMap)
 }
 
 func (r *resource) Label() string {
@@ -63,7 +63,7 @@ func (r *resource) getValue(p eval.Parameter, o eval.PuppetObject) *types.HashEn
 	if a, ok := v.(*types.ArrayValue); ok {
 		// Build hash from multiple attributes
 		entries := make([]*types.HashEntry, a.Len())
-		a.EachWithIndex(func(e eval.PValue, i int) {
+		a.EachWithIndex(func(e eval.Value, i int) {
 			a := e.String()
 			if v, ok := o.Get(a); ok {
 				entries[i] = types.WrapHashEntry(e, v)

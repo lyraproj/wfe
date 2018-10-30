@@ -17,19 +17,19 @@ import (
 
 var sampleData = eval.Wrap(nil, map[string]interface{}{
 	`aws`: map[string]interface{}{
-		`region`: `eu-west-1`,
+		`region`:  `eu-west-1`,
 		`keyname`: `aws-key-name`,
-		`tags`: map[string]string {
+		`tags`: map[string]string{
 			`created_by`: `john.mccabe@puppet.com`,
 			`department`: `engineering`,
-			`project`   : `incubator`,
-			`lifetime`  : `1h`,
+			`project`:    `incubator`,
+			`lifetime`:   `1h`,
 		},
 		`instance`: map[string]interface{}{
 			`count`: 5,
 		}}}).(*types.HashValue)
 
-func provider(c lookup.Context, key string, _ eval.KeyedValue) eval.PValue {
+func provider(c lookup.Context, key string, _ eval.OrderedMap) eval.Value {
 	if v, ok := sampleData.Get4(key); ok {
 		return v
 	}
@@ -97,4 +97,3 @@ func ExampleActivity() {
 	// }
 	//
 }
-

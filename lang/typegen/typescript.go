@@ -1,17 +1,17 @@
 package typegen
 
 import (
-	"github.com/puppetlabs/go-evaluator/eval"
 	"bytes"
-	"strings"
-	"github.com/puppetlabs/go-issues/issue"
+	"fmt"
+	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/types"
 	"github.com/puppetlabs/go-evaluator/utils"
-	"fmt"
+	"github.com/puppetlabs/go-issues/issue"
+	"strings"
 )
 
 type tsGenerator struct {
-	ctx eval.Context
+	ctx      eval.Context
 	excludes []string
 }
 
@@ -34,8 +34,8 @@ func (g *tsGenerator) GenerateTypes(ts eval.TypeSet, ns []string, indent int, bl
 	bld.WriteString(leafName)
 	bld.WriteString(` {`)
 	indent += 2
-	ns = append(append(make([]string, 0, len(ns) + 1), ns...), leafName)
-	ts.Types().EachValue(func(t eval.PValue) { g.GenerateType(t.(eval.PType), ns, indent, bld) })
+	ns = append(append(make([]string, 0, len(ns)+1), ns...), leafName)
+	ts.Types().EachValue(func(t eval.Value) { g.GenerateType(t.(eval.Type), ns, indent, bld) })
 	for i := len(ns); i > 0; i-- {
 		indent -= 2
 		newLine(indent, bld)
@@ -44,7 +44,7 @@ func (g *tsGenerator) GenerateTypes(ts eval.TypeSet, ns []string, indent int, bl
 	bld.WriteByte('\n')
 }
 
-func (g *tsGenerator) GenerateType(t eval.PType, ns []string, indent int, bld *bytes.Buffer) {
+func (g *tsGenerator) GenerateType(t eval.Type, ns []string, indent int, bld *bytes.Buffer) {
 	if ts, ok := t.(eval.TypeSet); ok {
 		g.GenerateTypes(ts, ns, indent, bld)
 		return
@@ -78,15 +78,15 @@ func (g *tsGenerator) GenerateType(t eval.PType, ns []string, indent int, bld *b
 	}
 }
 
-func (g *tsGenerator) ToTsType(ns []string, pType eval.PType) string {
+func (g *tsGenerator) ToTsType(ns []string, pType eval.Type) string {
 	bld := bytes.NewBufferString(``)
 	appendTsType(ns, pType, bld)
 	return bld.String()
 }
 
 type tsAttribute struct {
-	name string
-	typ string
+	name  string
+	typ   string
 	value string
 }
 
@@ -225,7 +225,7 @@ func appendParameters(params []*tsAttribute, indent int, bld *bytes.Buffer) {
 	for _, attr := range params {
 		newLine(indent, bld)
 		bld.WriteString(attr.name)
-		if  attr.value != `` {
+		if attr.value != `` {
 			bld.WriteByte('?')
 		}
 		bld.WriteString(`: `)
@@ -239,13 +239,13 @@ func appendParameters(params []*tsAttribute, indent int, bld *bytes.Buffer) {
 	bld.WriteString(`}`)
 }
 
-func toTsValue(value eval.PValue) string {
+func toTsValue(value eval.Value) string {
 	bld := bytes.NewBufferString(``)
 	appendTsValue(value, bld)
 	return bld.String()
 }
 
-func appendTsValue(value eval.PValue, bld *bytes.Buffer) {
+func appendTsValue(value eval.Value, bld *bytes.Buffer) {
 	switch value.(type) {
 	case *types.UndefValue:
 		bld.WriteString(`null`)
@@ -255,7 +255,7 @@ func appendTsValue(value eval.PValue, bld *bytes.Buffer) {
 		bld.WriteString(value.String())
 	case *types.ArrayValue:
 		bld.WriteByte('[')
-		value.(*types.ArrayValue).EachWithIndex(func(e eval.PValue, i int) {
+		value.(*types.ArrayValue).EachWithIndex(func(e eval.Value, i int) {
 			if i > 0 {
 				bld.WriteString(`, `)
 			}
@@ -264,7 +264,7 @@ func appendTsValue(value eval.PValue, bld *bytes.Buffer) {
 		bld.WriteByte(']')
 	case *types.HashValue:
 		bld.WriteByte('{')
-		value.(*types.HashValue).EachWithIndex(func(e eval.PValue, i int) {
+		value.(*types.HashValue).EachWithIndex(func(e eval.Value, i int) {
 			ev := e.(*types.HashEntry)
 			if i > 0 {
 				bld.WriteString(`, `)
@@ -277,7 +277,7 @@ func appendTsValue(value eval.PValue, bld *bytes.Buffer) {
 	}
 }
 
-func appendTsType(ns []string, pType eval.PType, bld *bytes.Buffer) {
+func appendTsType(ns []string, pType eval.Type, bld *bytes.Buffer) {
 	switch pType.(type) {
 	case *types.BooleanType:
 		bld.WriteString(`boolean`)
@@ -333,7 +333,7 @@ func relativeNs(ns []string, name string) []string {
 		return []string{}
 	}
 	if len(ns) == 0 || isParent(ns, parts) {
-		return parts[len(ns):len(parts)-1]
+		return parts[len(ns) : len(parts)-1]
 	}
 	panic(fmt.Errorf("cannot generate %s in namespace %s", name, ns))
 }

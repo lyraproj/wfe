@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/go-plugin"
-	"github.com/puppetlabs/go-fsm/wfe"
+	"github.com/puppetlabs/data-protobuf/datapb"
+	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-evaluator/proto"
+	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
+	"github.com/puppetlabs/go-fsm/lang/rpc/shared"
+	"github.com/puppetlabs/go-fsm/wfe"
 	"google.golang.org/grpc"
 	"log"
 	"net/rpc"
 	"os"
-	"github.com/puppetlabs/data-protobuf/datapb"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-fsm/lang/rpc/shared"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/proto"
 )
 
 type ActorsPlugin struct {
@@ -36,7 +36,7 @@ func (a *ActorsPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker
 	return &GRPCActors{ctx, broker, fsmpb.NewActorsClient(c)}, nil
 }
 
-func RunActor(ctx eval.Context, actorName string, client *plugin.Client, input eval.KeyedValue) eval.PValue {
+func RunActor(ctx eval.Context, actorName string, client *plugin.Client, input eval.OrderedMap) eval.Value {
 	// Connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *GRPCActors) InvokeAction(args *datapb.Data, genesis api.Genesis) (*data
 
 		case shared.GenesisResourceId:
 			// Message intended for the Genesis service
-			v := proto.FromPBData(resp.GetValue()).(eval.KeyedValue)
+			v := proto.FromPBData(resp.GetValue()).(eval.OrderedMap)
 			d := proto.ToPBData(genesis.Resource(v))
 			stream.Send(&fsmpb.Message{Id: resp.Id, Value: d})
 

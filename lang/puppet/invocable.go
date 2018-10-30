@@ -1,19 +1,19 @@
 package puppet
 
 import (
-"github.com/puppetlabs/go-evaluator/errors"
-"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-evaluator/errors"
+	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/impl"
 	"github.com/puppetlabs/go-evaluator/types"
-"github.com/puppetlabs/go-parser/parser"
-"io"
+	"github.com/puppetlabs/go-parser/parser"
+	"io"
 )
 
 type invocable struct {
-	name string
+	name       string
 	parameters []eval.Parameter
-	signature *types.CallableType
-	body parser.Expression
+	signature  *types.CallableType
+	body       parser.Expression
 }
 
 func NewInvocableBlock(name string, parameters []eval.Parameter, signature *types.CallableType, body parser.Expression) eval.InvocableValue {
@@ -32,11 +32,11 @@ func (i *invocable) ToString(bld io.Writer, format eval.FormatContext, g eval.RD
 	io.WriteString(bld, i.name)
 }
 
-func (i *invocable) Type() eval.PType {
+func (i *invocable) Type() eval.Type {
 	return i.signature
 }
 
-func (i *invocable) Call(c eval.Context, block eval.Lambda, args ...eval.PValue) (v eval.PValue) {
+func (i *invocable) Call(c eval.Context, block eval.Lambda, args ...eval.Value) (v eval.Value) {
 	if block != nil {
 		panic(errors.NewArgumentsError(i.name, `nested lambdas are not supported`))
 	}

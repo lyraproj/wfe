@@ -7,15 +7,15 @@ import (
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-issues/issue"
 	"github.com/puppetlabs/go-parser/parser"
-	"gopkg.in/yaml.v2"
 	"github.com/puppetlabs/go-parser/validator"
+	"gopkg.in/yaml.v2"
 )
 
 type transformer struct {
-	c eval.Context
-	l *parser.Locator
-	f parser.ExpressionFactory
-	p []string
+	c    eval.Context
+	l    *parser.Locator
+	f    parser.ExpressionFactory
+	p    []string
 	plen int
 }
 
@@ -34,7 +34,7 @@ func YamlToAST(c eval.Context, filename string, content []byte) parser.Expressio
 // EvaluateYaml calls YamlToAST to parse and transform the given YAML content into
 // a Puppet AST which is then evaluated by the eval.Evaluator obtained from the given
 // eval.Context. The result of the evaluation is returned.
-func EvaluateYaml(c eval.Context, filename string, content []byte) eval.PValue {
+func EvaluateYaml(c eval.Context, filename string, content []byte) eval.Value {
 	c.SetLanguage(eval.LangYAML)
 	return eval.Evaluate(c, YamlToAST(c, filename, content))
 }
@@ -157,7 +157,7 @@ func (yp *transformer) transformArguments(mi *yaml.MapItem) []parser.Expression 
 		// Args passed as positional array
 		return val.Elements()
 	}
-	return []parser.Expression { va }
+	return []parser.Expression{va}
 }
 
 func (yp *transformer) transformEvalValue(expr parser.Expression) parser.Expression {

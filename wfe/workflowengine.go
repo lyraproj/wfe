@@ -19,7 +19,7 @@ import (
 )
 
 type WorkflowEngine interface {
-	Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue
+	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 
 	BuildInvertedGraph(identity api.Identity)
 
@@ -54,7 +54,7 @@ func (a *serverActivity) Attributes() []encoding.Attribute {
 	b.WriteString("],\noutput:[")
 	appendParameterNames(a.Output(), b)
 	b.WriteString(`]}"`)
-	return []encoding.Attribute{{Key:"label", Value:b.String()}}
+	return []encoding.Attribute{{Key: "label", Value: b.String()}}
 }
 
 func (a *serverActivity) DOTID() string {
@@ -75,7 +75,7 @@ type workflowEngine struct {
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
 	runLatch     map[int64]bool
-	values       map[string]eval.PValue
+	values       map[string]eval.Value
 	inbox        chan *serverActivity
 	jobCounter   int32
 	done         chan bool
@@ -168,7 +168,7 @@ func (s *workflowEngine) Validate() {
 		}
 
 		guardNames := make([]string, 0, gc)
-		for n := range(guards) {
+		for n := range guards {
 			guardNames = append(guardNames, n)
 		}
 		sort.Strings(guardNames)
@@ -261,7 +261,7 @@ func (vp valueProducers) validate(a api.Activity) {
 }
 
 func (vp valueProducers) validateInput(a api.Activity) {
-	var checkDep = func (name string) {
+	var checkDep = func(name string) {
 		if _, found := vp[name]; !found {
 			panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
 		}
@@ -276,9 +276,9 @@ func (vp valueProducers) validateInput(a api.Activity) {
 	}
 }
 
-func (s *workflowEngine) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
-	s.values = make(map[string]eval.PValue, 37)
-	input.EachPair(func(k, v eval.PValue) {
+func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
+	s.values = make(map[string]eval.Value, 37)
+	input.EachPair(func(k, v eval.Value) {
 		s.values[k.String()] = v
 	})
 
@@ -324,7 +324,7 @@ func (s *workflowEngine) DumpVariables() {
 func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Activity {
 
 	dam := make(map[string]api.Activity, 0)
-	var addDeps = func (name string) {
+	var addDeps = func(name string) {
 		if ds, found := vp[name]; found {
 			for _, d := range ds {
 				if d != s { // Workflow itself only has external dependencies
@@ -384,10 +384,10 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	}
 	args := types.WrapHash(entries)
 
-	result := a.Run(ctx, args).(eval.KeyedValue)
+	result := a.Run(ctx, args).(eval.OrderedMap)
 	if result != nil && result.Len() > 0 {
 		s.valuesLock.Lock()
-		result.EachPair(func(k, v eval.PValue) {
+		result.EachPair(func(k, v eval.Value) {
 			s.values[k.String()] = v
 		})
 		s.valuesLock.Unlock()
@@ -402,7 +402,7 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	}
 }
 
-func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activity, param eval.Parameter) eval.PValue {
+func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activity, param eval.Parameter) eval.Value {
 	v := param.Value()
 	n := param.Name()
 	if v == nil {

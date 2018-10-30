@@ -13,7 +13,7 @@ type Condition interface {
 	Precedence() int
 
 	// IsTrue returns true if the given input satisfies the condition, false otherwise
-	IsTrue(input eval.KeyedValue) bool
+	IsTrue(input eval.OrderedMap) bool
 
 	// Returns all names in use by this condition and its nested conditions. The returned
 	// slice is guaranteed to be unique and sorted alphabetically

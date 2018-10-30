@@ -31,7 +31,7 @@ func ExampleRange() {
 				return &Entry{strconv.Itoa(int(in.Idx)), in.Idx}, nil
 			}, &R{}, &struct{ Idx int64 }{}))
 
-		args := eval.Wrap(ctx, map[string]int64{`from`: 10, `to`: 15}).(eval.KeyedValue)
+		args := eval.Wrap(ctx, map[string]int64{`from`: 10, `to`: 15}).(eval.OrderedMap)
 		result := wf.Run(ctx, args)
 		fmt.Println(result.Get5(`a`, eval.EMPTY_STRING))
 		return nil
@@ -63,7 +63,7 @@ func ExampleTimes() {
 				return &Entry{strconv.Itoa(int(in.Idx)), in.Idx}, nil
 			}, &Count{}, &struct{ Idx int64 }{}))
 
-		args := eval.Wrap(ctx, map[string]int64{`count`: 3}).(eval.KeyedValue)
+		args := eval.Wrap(ctx, map[string]int64{`count`: 3}).(eval.OrderedMap)
 		result := as.Run(ctx, args)
 		fmt.Println(result.Get5(`a`, eval.EMPTY_STRING))
 		return nil

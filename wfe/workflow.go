@@ -11,7 +11,7 @@ type workflow struct {
 	activities []api.Activity
 }
 
-func (w *workflow) Run(ctx eval.Context, input eval.KeyedValue) eval.KeyedValue {
+func (w *workflow) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	wf := NewWorkflowEngine(w)
 	wf.Validate()
 	return wf.Run(ctx, input)
