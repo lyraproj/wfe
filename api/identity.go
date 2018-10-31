@@ -1,4 +1,4 @@
-package activity
+package api
 
 type Identity interface {
 	// Exists returns true if a resource corresponding to the unique identifier exists

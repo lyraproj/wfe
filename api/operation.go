@@ -1,4 +1,4 @@
-package activity
+package api
 
 import (
 	"github.com/puppetlabs/go-evaluator/eval"
@@ -12,6 +12,7 @@ const Read Operation = 1
 const Update Operation = 2
 const Delete Operation = 3
 const Upsert Operation = 4
+const Do Operation = 5
 
 func (is Operation) String() string {
 	switch is {
@@ -21,10 +22,12 @@ func (is Operation) String() string {
 		return `read`
 	case Update:
 		return `update`
-	case Upsert:
-		return `upcert`
 	case Delete:
 		return `delete`
+	case Upsert:
+		return `upcert`
+	case Do:
+		return `do`
 	default:
 		return `unknown iteration style`
 	}
@@ -38,10 +41,12 @@ func NewOperation(operation string) Operation {
 		return Read
 	case `update`:
 		return Update
-	case `upsert`:
-		return Update
 	case `detete`:
 		return Delete
+	case `upsert`:
+		return Upsert
+	case `do`:
+		return Do
 	}
 	panic(eval.Error(WF_ILLEGAL_OPERATION, issue.H{`operation`: operation}))
 }

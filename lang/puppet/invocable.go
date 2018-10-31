@@ -32,7 +32,7 @@ func (i *invocable) ToString(bld io.Writer, format eval.FormatContext, g eval.RD
 	io.WriteString(bld, i.name)
 }
 
-func (i *invocable) Type() eval.Type {
+func (i *invocable) PType() eval.Type {
 	return i.signature
 }
 

@@ -53,7 +53,7 @@ func sampleWorkflow(ctx eval.Context) (api.Workflow, error) {
 		return nil, err
 	}
 
-	if wf, ok := eval.Load(ctx, eval.NewTypedName(eval.WORKFLOW, workflowName)); ok {
+	if wf, ok := eval.Load(ctx, eval.NewTypedName(eval.ACTIVITY, workflowName)); ok {
 		return wf.(api.Workflow), nil
 	}
 	return nil, fmt.Errorf(`%s did not define workflow %s`, path, workflowName)

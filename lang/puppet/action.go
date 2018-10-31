@@ -57,7 +57,7 @@ func (a *crd) ToString(bld io.Writer, format eval.FormatContext, g eval.RDetect)
 }
 
 func (a *crd) Type() eval.Type {
-	return a.functions[api.Read].Type()
+	return a.functions[api.Read].PType()
 }
 
 type crud struct {

@@ -14,82 +14,82 @@ import (
 	"io"
 )
 
-type activity struct {
+type pActivity struct {
 	activity   api.Activity
-	parent     *activity
+	parent     *pActivity
 	properties *types.HashValue
 	signature  *types.CallableType
 	expression *parser.ActivityExpression
 }
 
-func (a *activity) Identifier() string {
+func (a *pActivity) Identifier() string {
 	return a.activity.Identifier()
 }
 
-func (a *activity) Input() []eval.Parameter {
+func (a *pActivity) Input() []eval.Parameter {
 	return a.activity.Input()
 }
 
-func (a *activity) Activities() []api.Activity {
+func (a *pActivity) Activities() []api.Activity {
 	if wf, ok := a.activity.(api.Workflow); ok {
 		return wf.Activities()
 	}
 	return []api.Activity{}
 }
 
-func (a *activity) Output() []eval.Parameter {
+func (a *pActivity) Output() []eval.Parameter {
 	return a.activity.Output()
 }
 
-func (a *activity) Label() string {
+func (a *pActivity) Label() string {
 	return wfe.ActivityLabel(a.activity)
 }
 
-func (a *activity) Equals(other interface{}, guard eval.Guard) bool {
+func (a *pActivity) Equals(other interface{}, guard eval.Guard) bool {
 	return a == other
 }
 
-func (a *activity) When() api.Condition {
+func (a *pActivity) When() api.Condition {
 	return a.activity.When()
 }
 
-func (a *activity) ToString(bld io.Writer, format eval.FormatContext, g eval.RDetect) {
+func (a *pActivity) ToString(bld io.Writer, format eval.FormatContext, g eval.RDetect) {
 	io.WriteString(bld, string(a.expression.Style()))
 	utils.WriteByte(bld, ' ')
 	io.WriteString(bld, a.Name())
 }
 
-func (a *activity) Type() eval.Type {
+func (a *pActivity) PType() eval.Type {
 	return a.signature
 }
 
-func (a *activity) Signature() eval.Signature {
+func (a *pActivity) Signature() eval.Signature {
 	return a.signature
 }
 
-func (a *activity) String() string {
+func (a *pActivity) String() string {
 	return eval.ToString(a)
 }
 
-func (a *activity) Dispatchers() []eval.Lambda {
+func (a *pActivity) Dispatchers() []eval.Lambda {
 	return []eval.Lambda{a}
 }
 
-func (a *activity) Name() string {
+func (a *pActivity) Name() string {
 	return a.expression.Name()
 }
 
-func (a *activity) Parameters() []eval.Parameter {
+func (a *pActivity) Parameters() []eval.Parameter {
 	return a.activity.Input()
 }
 
 func init() {
 	impl.NewPuppetActivity = func(expression *parser.ActivityExpression) eval.Function {
-		return &activity{expression: expression}
+		return &pActivity{expression: expression}
 	}
 }
 
-func (a *activity) Call(c eval.Context, block eval.Lambda, args ...eval.Value) eval.Value {
+func (a *pActivity) Call(c eval.Context, block eval.Lambda, args ...eval.Value) eval.Value {
 	names := a.signature.ParameterNames()
 	entries := make([]*types.HashEntry, len(args))
 	for i, arg := range args {
@@ -98,15 +98,15 @@ func (a *activity) Call(c eval.Context, block eval.Lambda, args ...eval.Value) e
 	return a.CallNamed(c, block, types.WrapHash(entries))
 }
 
-func (a *activity) CallNamed(c eval.Context, block eval.Lambda, args eval.OrderedMap) eval.Value {
+func (a *pActivity) CallNamed(c eval.Context, block eval.Lambda, args eval.OrderedMap) eval.Value {
 	return a.Run(c, args)
 }
 
-func (a *activity) Run(c eval.Context, args eval.OrderedMap) eval.OrderedMap {
+func (a *pActivity) Run(c eval.Context, args eval.OrderedMap) eval.OrderedMap {
 	return a.activity.Run(c, args)
 }
 
-func (a *activity) Resolve(c eval.Context) {
+func (a *pActivity) Resolve(c eval.Context) {
 	if a.activity != nil {
 		panic(fmt.Sprintf(`Attempt to resolve already resolved %s %s`, string(a.expression.Style()), a.Name()))
 	}
@@ -115,7 +115,7 @@ func (a *activity) Resolve(c eval.Context) {
 		v := eval.Evaluate(c, props)
 		dh, ok := v.(*types.HashValue)
 		if !ok {
-			panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `properties`, `expected`: `Hash`, `actual`: v.Type()}))
+			panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `properties`, `expected`: `Hash`, `actual`: v.PType()}))
 		}
 		a.properties = dh
 	}
@@ -125,7 +125,7 @@ func (a *activity) Resolve(c eval.Context) {
 	name := a.expression.Name()
 	elems := make([]*types.StructElement, len(output))
 	for i, op := range output {
-		elems[i] = types.NewStructElement2(op.Name(), op.Type())
+		elems[i] = types.NewStructElement2(op.Name(), op.PType())
 	}
 	signature := types.NewCallableType(impl.CreateTupleType(input), types.NewStructType(elems), nil)
 
@@ -148,7 +148,7 @@ func (a *activity) Resolve(c eval.Context) {
 		output = iterator.Output()
 		elems = make([]*types.StructElement, len(output))
 		for i, op := range output {
-			elems[i] = types.NewStructElement2(op.Name(), op.Type())
+			elems[i] = types.NewStructElement2(op.Name(), op.PType())
 		}
 		signature = types.NewCallableType(impl.CreateTupleType(input), types.NewStructType(elems), nil)
 		activity = iterator
@@ -157,16 +157,16 @@ func (a *activity) Resolve(c eval.Context) {
 	a.signature = signature
 }
 
-func (a *activity) Style() string {
+func (a *pActivity) Style() string {
 	return string(a.expression.Style())
 }
 
-func (a *activity) inferInput() []eval.Parameter {
+func (a *pActivity) inferInput() []eval.Parameter {
 	// TODO:
 	return eval.NoParameters
 }
 
-func (a *activity) inferOutput() []eval.Parameter {
+func (a *pActivity) inferOutput() []eval.Parameter {
 	// TODO:
 	return eval.NoParameters
 }
@@ -175,7 +175,7 @@ func noParamsFunc() []eval.Parameter {
 	return eval.NoParameters
 }
 
-func (a *activity) possibleIterator(activity api.Activity) api.Activity {
+func (a *pActivity) possibleIterator(activity api.Activity) api.Activity {
 	if a.properties == nil {
 		return activity
 	}
@@ -187,7 +187,7 @@ func (a *activity) possibleIterator(activity api.Activity) api.Activity {
 
 	iteratorDef, ok := v.(*types.HashValue)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `iteration`, `expected`: `Hash`, `actual`: v.Type()}))
+		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
 	}
 
 	v = iteratorDef.Get5(`function`, eval.UNDEF)
@@ -206,7 +206,7 @@ func (a *activity) possibleIterator(activity api.Activity) api.Activity {
 }
 
 // Extract activities from a Workflow definition
-func (a *activity) getActivities(c eval.Context) []api.Activity {
+func (a *pActivity) getActivities(c eval.Context) []api.Activity {
 	de := a.expression.Definition()
 	if de == nil {
 		return []api.Activity{}
@@ -222,7 +222,7 @@ func (a *activity) getActivities(c eval.Context) []api.Activity {
 	acs := make([]api.Activity, len(stmts))
 	for i, stmt := range stmts {
 		if as, ok := stmt.(*parser.ActivityExpression); ok {
-			ac := &activity{parent: a, expression: as}
+			ac := &pActivity{parent: a, expression: as}
 			ac.Resolve(c)
 			acs[i] = ac
 		} else if fn, ok := stmt.(*parser.FunctionDefinition); ok {
@@ -236,7 +236,7 @@ func (a *activity) getActivities(c eval.Context) []api.Activity {
 	return acs
 }
 
-func (a *activity) getCRD(c eval.Context, name string, input []eval.Parameter, signature *types.CallableType) api.CRD {
+func (a *pActivity) getCRD(c eval.Context, name string, input []eval.Parameter, signature *types.CallableType) api.CRD {
 	de := a.expression.Definition()
 	if de == nil {
 		panic(c.Error(a.expression, WF_NO_DEFINITION, issue.NO_ARGS))
@@ -277,14 +277,14 @@ func (a *activity) getCRD(c eval.Context, name string, input []eval.Parameter, s
 	return NewCRD(name, input, fs)
 }
 
-func (a *activity) getWhen() api.Condition {
+func (a *pActivity) getWhen() api.Condition {
 	if when, ok := a.getStringProperty(`when`); ok {
 		return condition.Parse(when)
 	}
 	return nil
 }
 
-func (a *activity) extractParameters(props *types.HashValue, field string, dflt func() []eval.Parameter) []eval.Parameter {
+func (a *pActivity) extractParameters(props *types.HashValue, field string, dflt func() []eval.Parameter) []eval.Parameter {
 	if props == nil {
 		return dflt()
 	}
@@ -296,7 +296,7 @@ func (a *activity) extractParameters(props *types.HashValue, field string, dflt 
 
 	ia, ok := v.(*types.ArrayValue)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `Array`, `actual`: v.Type()}))
+		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `Array`, `actual`: v.PType()}))
 	}
 
 	params := make([]eval.Parameter, ia.Len())
@@ -304,13 +304,13 @@ func (a *activity) extractParameters(props *types.HashValue, field string, dflt 
 		if p, ok := v.(eval.Parameter); ok {
 			params[i] = p
 		} else {
-			panic(eval.Error(WF_ELEMENT_NOT_PARAMETER, issue.H{`type`: p.Type(), `field`: field}))
+			panic(eval.Error(WF_ELEMENT_NOT_PARAMETER, issue.H{`type`: p.PType(), `field`: field}))
 		}
 	})
 	return params
 }
 
-func (a *activity) getState(c eval.Context) eval.OrderedMap {
+func (a *pActivity) getState(c eval.Context) eval.OrderedMap {
 	de := a.expression.Definition()
 	if de == nil {
 		return eval.EMPTY_MAP
@@ -323,7 +323,7 @@ func (a *activity) getState(c eval.Context) eval.OrderedMap {
 	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
-func (a *activity) getResourceType(c eval.Context) eval.ObjectType {
+func (a *pActivity) getResourceType(c eval.Context) eval.ObjectType {
 	n := a.Name()
 	if a.properties != nil {
 		if tv, ok := a.properties.Get4(`type`); ok {
@@ -352,7 +352,7 @@ func (a *activity) getResourceType(c eval.Context) eval.ObjectType {
 	panic(eval.Error(eval.EVAL_UNRESOLVED_TYPE, issue.H{`typeString`: tn.Name()}))
 }
 
-func (a *activity) getTypespace() string {
+func (a *pActivity) getTypespace() string {
 	if ts, ok := a.getStringProperty(`typespace`); ok {
 		return ts
 	}
@@ -362,7 +362,7 @@ func (a *activity) getTypespace() string {
 	return ``
 }
 
-func (a *activity) getStringProperty(field string) (string, bool) {
+func (a *pActivity) getStringProperty(field string) (string, bool) {
 	if a.properties == nil {
 		return ``, false
 	}
@@ -375,5 +375,5 @@ func (a *activity) getStringProperty(field string) (string, bool) {
 	if s, ok := v.(*types.StringValue); ok {
 		return s.String(), true
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `String`, `actual`: v.Type()}))
+	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `String`, `actual`: v.PType()}))
 }

@@ -82,7 +82,7 @@ func convertOutput(function eval.Function) []eval.Parameter {
 		es := st.Elements()
 		ps := make([]eval.Parameter, len(es))
 		for i, e := range es {
-			ps[i] = impl.NewParameter(e.Name(), e.Type(), nil, false)
+			ps[i] = impl.NewParameter(e.Name(), e.Value(), nil, false)
 		}
 		return ps
 	}

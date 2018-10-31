@@ -69,7 +69,7 @@ func (it *iterator) Output() []eval.Parameter {
 	key := output[0]
 	value := output[1]
 	return []eval.Parameter{
-		impl.NewParameter(it.resultName, types.NewHashType(key.ValueType(), value.ValueType(), nil), nil, false)}
+		impl.NewParameter(it.resultName, types.NewHashType(key.Type(), value.Type(), nil), nil, false)}
 }
 
 func (it *iterator) Variables() []eval.Parameter {
@@ -187,7 +187,7 @@ func assertInt(t api.Iterator, arg eval.Value, paramIdx int) int64 {
 	iv, ok := arg.(*types.IntegerValue)
 	if !ok {
 		panic(eval.Error(WF_ITERATION_PARAMETER_WRONG_TYPE, issue.H{
-			`iterator`: t, `parameter`: t.Over()[paramIdx].Name(), `expected`: `Integer`, `actual`: arg.Type()}))
+			`iterator`: t, `parameter`: t.Over()[paramIdx].Name(), `expected`: `Integer`, `actual`: arg.PType()}))
 	}
 	return iv.Int()
 }
