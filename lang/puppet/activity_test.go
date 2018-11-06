@@ -31,7 +31,7 @@ var sampleData = eval.Wrap(nil, map[string]interface{}{
 			`count`: 5,
 		}}}).(*types.HashValue)
 
-func provider(c lookup.Context, key string, _ eval.OrderedMap) eval.Value {
+func provider(c lookup.Invocation, key string, _ eval.OrderedMap) eval.Value {
 	if v, ok := sampleData.Get4(key); ok {
 		return v
 	}
