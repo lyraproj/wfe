@@ -91,50 +91,6 @@ workflow attach {
     map_public_ip_on_launch => true
   }
 
-  # An action is a multi action when the parameter declaration is prefixed by an
-  # "iterate" keyword followed by an expression. The expression must evaluate to an
-  # integer (iterate this number of times), an array (iterate over these elements),
-  # or a hash (iterate over these associations).
-  #
-  # The output of such an action is a variable named after the action itself. It is
-  # a Hash for which each iteration produces an association in the form of a two
-  # element tuple representing the key and value.
-  #
-  # In practice, the iterations will be processed by a worker pool that executes
-  # them in parallel and the resulting hash is made available to subsequent actions
-  # when all iterations have completed.
-  #
-  # An integer or array iteration adds one parameter to the beginning of the
-  # action's parameter list (value of counter or current element). A hash iteration
-  # adds two parameters (key and value of current element).
-  #
-  # E.g. for an array type prefix expression, this declaration:
-  #
-  #   action nodes iterate 5 (Integer $e, ...)
-  #     >> Tuple[String, Struct[public_ip => String, private_ip => String]] { ... }
-  #
-  # will result in the output type:
-  #
-  #   Struct[nodes =>
-  #     Hash[String, Struct[String, public_ip => String, private_ip => String]]]
-  #
-  # For a hash type prefix expression ($nodes assumed to be produced in previous
-  # example), this declaration:
-  #
-  #   action check_nodes iterate $nodes (
-  #     String $instance_id,
-  #     Struct[public_ip => String, private_ip => String] $node,
-  #     ...)
-  #       >> Tuple[String, Boolean] { ... }
-  #
-  # will result in the output type:
-  #
-  #     Struct[check_nodes => Hash[String, Boolean]]
-  #
-  # This example creates five instances and produces the variable $nodes which is
-  # a hash keyed by the instance_id of the created instances.
-  #
-
   resource instance {
     input => ($n, $region, $key_name, $tags),
     output => ($key = instance_id, $value = (public_ip, private_ip))
