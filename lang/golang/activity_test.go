@@ -133,7 +133,7 @@ var sampleData = map[string]eval.Value{
 	`L`: types.WrapString(`value of L`),
 }
 
-func provider(c lookup.Context, key string, _ eval.OrderedMap) eval.Value {
+func provider(c lookup.Invocation, key string, _ eval.OrderedMap) eval.Value {
 	if v, ok := sampleData[key]; ok {
 		return v
 	}

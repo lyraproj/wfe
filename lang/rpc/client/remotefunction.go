@@ -26,7 +26,7 @@ func NewRemoteAction(actors *GRPCActors, actorName string, action *fsmpb.Action)
 
 func (pf *remoteFunction) Call(g api.Genesis, a api.Activity, args eval.OrderedMap) eval.Value {
 	els := []eval.Value{types.WrapString(pf.actorName), types.WrapString(pf.actionName), args}
-	d := proto.ToPBData(types.WrapArray(els))
+	d := proto.ToPBData(types.WrapValues(els))
 	d, err := pf.actors.InvokeAction(d, g)
 	if err != nil {
 		panic(err)

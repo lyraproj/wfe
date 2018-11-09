@@ -97,7 +97,7 @@ func (g *tsGenerator) toTsAttrs(t eval.ObjectType, ns []string, attrs []eval.Att
 	for i, attr := range attrs {
 		tsAttr := &tsAttribute{name: issue.CamelToSnakeCase(attr.Name()), typ: g.ToTsType(ns, attr.Type())}
 		if attr.HasValue() {
-			tsAttr.value = toTsValue(attr.Value(g.ctx))
+			tsAttr.value = toTsValue(attr.Value())
 		}
 		if attr.Container() == t {
 			thisAttrs = append(thisAttrs, tsAttr)
@@ -290,7 +290,7 @@ func appendTsType(ns []string, pType eval.Type, bld *bytes.Buffer) {
 		bld.WriteString(` | null`)
 	case *types.ArrayType:
 		bld.WriteString(`Array<`)
-		appendTsType(ns, pType.(*types.ArrayType).Type(), bld)
+		appendTsType(ns, pType.(*types.ArrayType).PType(), bld)
 		bld.WriteString(`>`)
 	case *types.VariantType:
 		for i, v := range pType.(*types.VariantType).Types() {

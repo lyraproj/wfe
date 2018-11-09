@@ -133,7 +133,7 @@ func ExampleDelete() {
 	}
 
 	// Output:
-	// digraph attach {
+	// strict digraph attach {
 	//   // Node definitions.
 	//   vpc [label="vpc{
 	// input:[region,tags],

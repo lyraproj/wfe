@@ -98,10 +98,13 @@ func NewWorkflowEngine(workflow api.Workflow) WorkflowEngine {
 
 func (s *workflowEngine) addActivity(na api.Activity) {
 	// Check that no other activity is a producer of the same values
-	for _, n := range s.graph.Nodes() {
-		a := n.(api.Activity)
-		if a.Name() == na.Name() {
-			panic(issue.NewReported(WF_ALREADY_DEFINED, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
+	ni := s.graph.Nodes()
+	if ni != nil {
+		for ni.Next() {
+			a := ni.Node().(api.Activity)
+			if a.Name() == na.Name() {
+				panic(issue.NewReported(WF_ALREADY_DEFINED, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
+			}
 		}
 	}
 	a := &serverActivity{Activity: na, Node: s.graph.NewNode(), resolved: make(chan bool)}
@@ -113,7 +116,7 @@ func (s *workflowEngine) addActivity(na api.Activity) {
 const maxGuards = 8
 
 func (s *workflowEngine) GraphAsDot() []byte {
-	de, err := dot.Marshal(s.graph, s.Name(), ``, `  `, false)
+	de, err := dot.Marshal(s.graph, s.Name(), ``, `  `)
 	if err != nil {
 		panic(eval.Error(WF_GRAPH_DOT_MARSHAL, issue.H{`detail`: err.Error()}))
 	}
@@ -121,29 +124,36 @@ func (s *workflowEngine) GraphAsDot() []byte {
 }
 
 func (s *workflowEngine) BuildInvertedGraph(identity api.Identity) {
-	// Build a map that associates a produced value with the producer of that value
 	g := s.graph
-	activities := g.Nodes()
-	for _, e := range g.Edges() {
+	ni := g.Nodes()
+	if ni == nil {
+		return
+	}
+
+	// Build a map that associates a produced value with the producer of that value
+	ei := g.Edges()
+	for ei.Next() {
+		e := ei.Edge()
 		g.RemoveEdge(e.From().ID(), e.To().ID())
 	}
 
 	// Add workflow as the producer of input with values.
-	vp := make(valueProducers, len(activities)*5)
+	vp := make(valueProducers, ni.Len()*5)
 	vp.add(s, s.Input())
-	for _, a := range activities {
-		fa := a.(*serverActivity)
+	for ni.Next() {
+		fa := ni.Node().(*serverActivity)
 		if fa.When() == condition.Always || identity.Exists(fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
 
-	for _, a := range activities {
-		fa := a.(*serverActivity)
+	ni.Reset()
+	for ni.Next() {
+		fa := ni.Node().(*serverActivity)
 		if fa.When() == condition.Always || identity.Exists(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
-				g.SetEdge(g.NewEdge(a, dep.(graph.Node)))
+				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))
 			}
 		}
 	}
@@ -151,11 +161,15 @@ func (s *workflowEngine) BuildInvertedGraph(identity api.Identity) {
 
 func (s *workflowEngine) Validate() {
 	// Build a map that associates a produced value with the producer of that value
-	activities := s.graph.Nodes()
 	guards := make(map[string]bool)
 
-	for _, a := range activities {
-		for _, g := range a.(*serverActivity).When().Names() {
+	ni := s.graph.Nodes()
+	if ni == nil {
+		return
+	}
+
+	for ni.Next() {
+		for _, g := range ni.Node().(*serverActivity).When().Names() {
 			guards[g] = false
 		}
 	}
@@ -182,50 +196,57 @@ func (s *workflowEngine) Validate() {
 			guardCombo := types.WrapHash(es)
 
 			// Add workflow as the producer of input with values.
-			vp := make(valueProducers, len(activities)*5)
+			ni.Reset()
+			vp := make(valueProducers, ni.Len()*5)
 			vp.add(s, s.Input())
 
-			for _, a := range activities {
-				fa := a.(*serverActivity)
+			for ni.Next() {
+				fa := ni.Node().(*serverActivity)
 				if fa.When().IsTrue(guardCombo) {
 					vp.add(fa, fa.Output())
 				}
 			}
-			for _, a := range activities {
-				vp.validateInput(a.(*serverActivity))
+
+			ni.Reset()
+			for ni.Next() {
+				vp.validateInput(ni.Node().(*serverActivity))
 			}
 			vp.validate(s)
 		}
 
 		// Build the final graph that doesn't care about guards or multiple producers of a value
-		vp := make(valueProducers, len(activities)*5)
+		ni.Reset()
+		vp := make(valueProducers, ni.Len()*5)
 		vp.add(s, s.Input())
-		for _, a := range activities {
-			fa := a.(*serverActivity)
+		for ni.Next() {
+			fa := ni.Node().(*serverActivity)
 			vp.add(fa, fa.Output())
 		}
 
-		for _, a := range s.graph.Nodes() {
-			fa := a.(*serverActivity)
+		ni.Reset()
+		for ni.Next() {
+			fa := ni.Node().(*serverActivity)
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
-				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), a))
+				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), fa))
 			}
 		}
 	} else {
 		// Add workflow as the producer of input with values.
-		vp := make(valueProducers, len(activities)*5)
+		ni.Reset()
+		vp := make(valueProducers, ni.Len()*5)
 		vp.add(s, s.Input())
-		for _, a := range activities {
-			fa := a.(*serverActivity)
+		for ni.Next() {
+			fa := ni.Node().(*serverActivity)
 			vp.add(fa, fa.Output())
 		}
 
-		for _, a := range s.graph.Nodes() {
-			fa := a.(*serverActivity)
+		ni.Reset()
+		for ni.Next() {
+			fa := ni.Node().(*serverActivity)
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
-				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), a))
+				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), fa))
 			}
 		}
 		vp.validate(s)
@@ -283,8 +304,8 @@ func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.Order
 	})
 
 	// Run all nodes that can run, i.e. root nodes
-	activities := s.graph.Nodes()
-	if len(activities) == 0 {
+	ni := s.graph.Nodes()
+	if ni == nil {
 		return nil
 	}
 
@@ -295,8 +316,9 @@ func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.Order
 	for w := 1; w <= 5; w++ {
 		eval.Fork(ctx, func(cf eval.Context) { s.activityWorker(cf, w) })
 	}
-	for _, n := range activities {
-		if len(s.graph.To(n.ID())) == 0 {
+	for ni.Next() {
+		n := ni.Node()
+		if s.graph.To(n.ID()).Len() == 0 {
 			s.scheduleAction(n.(*serverActivity))
 		}
 	}
@@ -336,11 +358,18 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
 	}
 
-	for _, name := range a.When().Names() {
+	nextName: for _, name := range a.When().Names() {
+		for _, param := range a.Input() {
+			if name == param.Name() {
+				continue nextName
+			}
+		}
 		addDeps(name)
 	}
 	for _, param := range a.Input() {
-		addDeps(param.Name())
+		if param.Value() == nil {
+			addDeps(param.Name())
+		}
 	}
 
 	da := make([]api.Activity, 0, len(dam))
@@ -397,8 +426,9 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	// Schedule all activities that are dependent on this activity. Since a node can be
 	// dependent on several activities, it might be scheduled several times. It will
 	// however only run once. This is controlled by the runLatch.
-	for _, n := range s.graph.From(a.ID()) {
-		s.scheduleAction(n.(*serverActivity))
+	ni := s.graph.From(a.ID())
+	for ni.Next() {
+		s.scheduleAction(ni.Node().(*serverActivity))
 	}
 }
 
@@ -422,8 +452,8 @@ func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activit
 // fully resolved.
 func (s *workflowEngine) waitForEdgesTo(a *serverActivity) {
 	parents := s.graph.To(a.ID())
-	for _, before := range parents {
-		<-before.(*serverActivity).Resolved()
+	for parents.Next() {
+		<-parents.Node().(*serverActivity).Resolved()
 	}
 }
 

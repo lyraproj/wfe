@@ -29,7 +29,7 @@ var sampleData = eval.Wrap(nil, map[string]interface{}{
 			`count`: 5,
 		}}}).(*types.HashValue)
 
-func provider(c lookup.Context, key string, _ eval.OrderedMap) eval.Value {
+func provider(c lookup.Invocation, key string, _ eval.OrderedMap) eval.Value {
 	if v, ok := sampleData.Get4(key); ok {
 		return v
 	}
@@ -54,7 +54,7 @@ func ExampleActivity() {
 			return err
 		}
 
-		wf, ok := eval.Load(ctx, eval.NewTypedName(eval.WORKFLOW, workflowName))
+		wf, ok := eval.Load(ctx, eval.NewTypedName(eval.ACTIVITY, workflowName))
 		if !ok {
 			return fmt.Errorf(`%s did not define workflow %s`, path, workflowName)
 		}

@@ -4,9 +4,9 @@ import (
 	"github.com/puppetlabs/data-protobuf/datapb"
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/proto"
-	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/go-fsm/lang/rpc/fsmpb"
 	"reflect"
+	"github.com/puppetlabs/go-evaluator/impl"
 )
 
 func ExpandStringMap(sr reflect.Value) map[string]reflect.Value {
@@ -18,7 +18,7 @@ func ExpandStringMap(sr reflect.Value) map[string]reflect.Value {
 	return m
 }
 
-func ConvertFromPbParams(params []*fsmpb.Parameter) []eval.Parameter {
+func ConvertFromPbParams(c eval.Context, params []*fsmpb.Parameter) []eval.Parameter {
 	ps := make([]eval.Parameter, len(params))
 	for i, p := range params {
 		ld := p.GetLookup()
@@ -26,7 +26,7 @@ func ConvertFromPbParams(params []*fsmpb.Parameter) []eval.Parameter {
 		if ld != nil {
 			lookup = proto.FromPBData(ld)
 		}
-		ps[i] = api.NewParameter(p.GetName(), p.GetType(), lookup)
+		ps[i] = impl.NewParameter(p.GetName(), c.ParseType2(p.GetType()), lookup, false)
 	}
 	return ps
 }
@@ -34,7 +34,7 @@ func ConvertFromPbParams(params []*fsmpb.Parameter) []eval.Parameter {
 func ConvertToPbParams(params []eval.Parameter) []*fsmpb.Parameter {
 	ps := make([]*fsmpb.Parameter, len(params))
 	for i, p := range params {
-		ps[i] = &fsmpb.Parameter{Name: p.Name(), Type: p.TypeString()}
+		ps[i] = &fsmpb.Parameter{Name: p.Name(), Type: p.Type().String()}
 	}
 	return ps
 }

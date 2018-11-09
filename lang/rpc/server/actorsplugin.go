@@ -62,7 +62,7 @@ type GRPCServer struct {
 func (s *GRPCServer) GetActor(ctx context.Context, ar *fsmpb.ActorRequest) (*fsmpb.Actor, error) {
 	actor := s.impl.GetActor(ar.GetName())
 	return &fsmpb.Actor{
-		Actions: convertToPbActions(actor.GetActivities()),
+		Actions: convertToPbActions(actor.Activities()),
 		Input:   shared.ConvertToPbParams(actor.Input()),
 		Output:  shared.ConvertToPbParams(actor.Output()),
 	}, nil
@@ -98,7 +98,7 @@ func (s *GRPCServer) InvokeAction(stream fsmpb.Actors_InvokeActionServer) error 
 	}
 }
 
-func convertToPbActions(actions map[string]api.Activity) []*fsmpb.Action {
+func convertToPbActions(actions []api.Activity) []*fsmpb.Action {
 	ps := make([]*fsmpb.Action, 0, len(actions))
 	for _, p := range actions {
 		ps = append(ps, &fsmpb.Action{Name: p.Name(), Input: shared.ConvertToPbParams(p.Input()), Output: shared.ConvertToPbParams(p.Output())})
