@@ -2,50 +2,14 @@ package api
 
 import (
 	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-issues/issue"
+	"github.com/puppetlabs/go-servicesdk/wfapi"
 )
-
-type IterationStyle int
-
-const IterationStyleEach = 1
-const IterationStyleEachPair = 2
-const IterationStyleRange = 3
-const IterationStyleTimes = 4
-
-func (is IterationStyle) String() string {
-	switch is {
-	case IterationStyleEach:
-		return `each`
-	case IterationStyleEachPair:
-		return `eachPair`
-	case IterationStyleRange:
-		return `range`
-	case IterationStyleTimes:
-		return `times`
-	default:
-		return `unknown iteration style`
-	}
-}
-
-func NewIterationStyle(style string) IterationStyle {
-	switch style {
-	case `each`:
-		return IterationStyleEach
-	case `eachPair`, `each_pair`:
-		return IterationStyleEachPair
-	case `range`:
-		return IterationStyleRange
-	case `times`:
-		return IterationStyleTimes
-	}
-	panic(eval.Error(WF_ILLEGAL_ITERATION_STYLE, issue.H{`style`: style}))
-}
 
 type Iterator interface {
 	Activity
 
 	// Style returns the style of iterator, times, range, each, or eachPair.
-	IterationStyle() IterationStyle
+	IterationStyle() wfapi.IterationStyle
 
 	// Producer returns the Activity that will be invoked once for each iteration
 	Producer() Activity

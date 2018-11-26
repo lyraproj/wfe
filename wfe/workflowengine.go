@@ -6,8 +6,8 @@ import (
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-evaluator/types"
 	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-fsm/wfe/condition"
 	"github.com/puppetlabs/go-issues/issue"
+	"github.com/puppetlabs/go-servicesdk/condition"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -21,7 +21,7 @@ import (
 type WorkflowEngine interface {
 	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 
-	BuildInvertedGraph(identity api.Identity)
+	BuildInvertedGraph(ctx eval.Context)
 
 	GraphAsDot() []byte
 
@@ -71,7 +71,6 @@ func (a *serverActivity) Resolved() <-chan bool {
 
 type workflowEngine struct {
 	api.Workflow
-
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
 	runLatch     map[int64]bool
@@ -123,7 +122,7 @@ func (s *workflowEngine) GraphAsDot() []byte {
 	return de
 }
 
-func (s *workflowEngine) BuildInvertedGraph(identity api.Identity) {
+func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
 	g := s.graph
 	ni := g.Nodes()
 	if ni == nil {
@@ -138,11 +137,12 @@ func (s *workflowEngine) BuildInvertedGraph(identity api.Identity) {
 	}
 
 	// Add workflow as the producer of input with values.
+	identity := getIdentity(c)
 	vp := make(valueProducers, ni.Len()*5)
 	vp.add(s, s.Input())
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.Exists(fa.Identifier()) {
+		if fa.When() == condition.Always || identity.exists(fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
@@ -150,7 +150,7 @@ func (s *workflowEngine) BuildInvertedGraph(identity api.Identity) {
 	ni.Reset()
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.Exists(fa.Identifier()) {
+		if fa.When() == condition.Always || identity.exists(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))
@@ -291,7 +291,7 @@ func (vp valueProducers) validateInput(a api.Activity) {
 		checkDep(name)
 	}
 	for _, param := range a.Input() {
-		if param.Value() == nil {
+		if !param.HasValue() {
 			checkDep(param.Name())
 		}
 	}
@@ -367,7 +367,7 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 		addDeps(name)
 	}
 	for _, param := range a.Input() {
-		if param.Value() == nil {
+		if !param.HasValue() {
 			addDeps(param.Name())
 		}
 	}
@@ -433,19 +433,17 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 }
 
 func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activity, param eval.Parameter) eval.Value {
-	v := param.Value()
 	n := param.Name()
-	if v == nil {
-		ok := false
+	if !param.HasValue() {
 		s.valuesLock.RLock()
-		v, ok = s.values[n]
+		v, ok := s.values[n]
 		s.valuesLock.RUnlock()
 		if ok {
 			return v
 		}
 		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: activity, `value`: n}))
 	}
-	return types.ResolveDeferred(ctx, v)
+	return types.ResolveDeferred(ctx, param.Value())
 }
 
 // Ensure that all nodes that has an edge to this node have been

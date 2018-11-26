@@ -6,7 +6,6 @@ import (
 	"github.com/puppetlabs/go-evaluator/types"
 	"github.com/puppetlabs/go-issues/issue"
 	"reflect"
-	"runtime"
 )
 
 func MakeParams(ctx eval.Context, name string, v interface{}) []eval.Parameter {
@@ -36,8 +35,5 @@ func ParamsFromStruct(ctx eval.Context, name string, ptr reflect.Type) []eval.Pa
 			return params
 		}
 	}
-
-	_, file, line, _ := runtime.Caller(2)
-	panic(issue.NewReported(WF_NOT_STRUCTPTR,
-		issue.SEVERITY_ERROR, issue.H{`name`: name, `type`: ptr.String()}, issue.NewLocation(file, line, 0)))
+	panic(eval.Error(WF_NOT_STRUCTPTR, issue.H{`name`: name, `type`: ptr.String()}))
 }

@@ -29,7 +29,7 @@ func ExampleGenerator_GenerateTypes() {
 	c := eval.Puppet.RootContext()
 
 	// Create a TypeSet from a list of Go structs
-	typeSet := c.Reflector().TypeSetFromReflect(`My::Own`, semver.MustParseVersion(`1.0.0`),
+	typeSet := c.Reflector().TypeSetFromReflect(`My::Own`, semver.MustParseVersion(`1.0.0`), nil,
 		reflect.TypeOf(&Address{}), reflect.TypeOf(&Person{}), reflect.TypeOf(&ExtendedPerson{}))
 
 	// Make the types known to the current loader

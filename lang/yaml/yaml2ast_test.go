@@ -40,7 +40,7 @@ func provider(c lookup.Invocation, key string, _ eval.OrderedMap) eval.Value {
 func ExampleActivity() {
 	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
 	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	err := lookup.DoWithParent(context.Background(), provider, func(ctx lookup.Context) error {
+	err := lookup.TryWithParent(context.Background(), provider, func(ctx lookup.Context) error {
 		workflowName := `attach`
 		path := `testdata/` + workflowName + `.yaml`
 		content, err := ioutil.ReadFile(path)
@@ -54,7 +54,7 @@ func ExampleActivity() {
 			return err
 		}
 
-		wf, ok := eval.Load(ctx, eval.NewTypedName(eval.ACTIVITY, workflowName))
+		wf, ok := eval.Load(ctx, eval.NewTypedName(eval.NsActivity, workflowName))
 		if !ok {
 			return fmt.Errorf(`%s did not define workflow %s`, path, workflowName)
 		}
@@ -66,34 +66,4 @@ func ExampleActivity() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	// Output:
-	// {
-	//   'vpc_id' => 'FAKED_VPC_ID',
-	//   'subnet_id' => 'FAKED_SUBNET_ID',
-	//   'internet_gateway_id' => 'FAKED_GATEWAY_ID',
-	//   'nodes' => {
-	//     '0' => {
-	//       'public_ip' => 'FAKED_PUBLIC_IP',
-	//       'private_ip' => 'FAKED_PRIVATE_IP'
-	//     },
-	//     '1' => {
-	//       'public_ip' => 'FAKED_PUBLIC_IP',
-	//       'private_ip' => 'FAKED_PRIVATE_IP'
-	//     },
-	//     '2' => {
-	//       'public_ip' => 'FAKED_PUBLIC_IP',
-	//       'private_ip' => 'FAKED_PRIVATE_IP'
-	//     },
-	//     '3' => {
-	//       'public_ip' => 'FAKED_PUBLIC_IP',
-	//       'private_ip' => 'FAKED_PRIVATE_IP'
-	//     },
-	//     '4' => {
-	//       'public_ip' => 'FAKED_PUBLIC_IP',
-	//       'private_ip' => 'FAKED_PRIVATE_IP'
-	//     }
-	//   }
-	// }
-	//
 }

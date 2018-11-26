@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/puppetlabs/go-evaluator/eval"
 	"github.com/puppetlabs/go-issues/issue"
+	"github.com/puppetlabs/go-servicesdk/wfapi"
 )
 
 // An Activity of a Workflow. The workflow is an Activity in itself and can be used in
@@ -12,7 +13,7 @@ type Activity interface {
 
 	// When returns an optional Condition that controls whether or not this activity participates
 	// in the workflow.
-	When() Condition
+	When() wfapi.Condition
 
 	// Identifier returns a string that uniquely identifies the activity within a resource. The string
 	// is guaranteed to remain stable across invocations provided that no activity names, resource types
@@ -33,7 +34,5 @@ type Activity interface {
 
 	// Run will execute this Activity. The given input must match the declared Input. It will return
 	// a value that corresponds to the Output declaration.
-	//
-	// The Scope of the given eval.Context must contain an ActivityContext named "genesis::context" prior to this call.
 	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 }

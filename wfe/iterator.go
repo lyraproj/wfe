@@ -7,6 +7,9 @@ import (
 	"github.com/puppetlabs/go-evaluator/types"
 	"github.com/puppetlabs/go-fsm/api"
 	"github.com/puppetlabs/go-issues/issue"
+	"github.com/puppetlabs/go-servicesdk/service"
+	"github.com/puppetlabs/go-servicesdk/serviceapi"
+	"github.com/puppetlabs/go-servicesdk/wfapi"
 	"sync/atomic"
 )
 
@@ -19,18 +22,23 @@ type iterator struct {
 	resultName string
 }
 
-func Iterator(style api.IterationStyle, activity api.Activity, name string, over, variables []eval.Parameter) api.Activity {
+func Iterator(def serviceapi.Definition) api.Activity {
+	over := getParameters(`over`, def.Properties())
+	variables := getParameters(`variables`, def.Properties())
+	style := wfapi.NewIterationStyle(GetStringProperty(def, `iteration_style`))
+	activity := CreateActivity(GetProperty(def, `producer`, service.Definition_Type).(serviceapi.Definition))
+	resultName := wfapi.LeafName(def.Identifier().Name())
 	switch style {
-	case api.IterationStyleRange:
-		return NewRange(activity, name, over, variables)
-	case api.IterationStyleTimes:
-		return NewTimes(activity, name, over, variables)
+	case wfapi.IterationStyleRange:
+		return NewRange(activity, resultName, over, variables)
+	case wfapi.IterationStyleTimes:
+		return NewTimes(activity, resultName, over, variables)
 	default:
 		panic(eval.Error(api.WF_ILLEGAL_ITERATION_STYLE, issue.H{`style`: style.String()}))
 	}
 }
 
-func (it *iterator) IterationStyle() api.IterationStyle {
+func (it *iterator) IterationStyle() wfapi.IterationStyle {
 	panic("implement me")
 }
 
@@ -210,8 +218,8 @@ func (t *times) Label() string {
 	return iterLabel(t)
 }
 
-func (t *times) IterationStyle() api.IterationStyle {
-	return api.IterationStyleTimes
+func (t *times) IterationStyle() wfapi.IterationStyle {
+	return wfapi.IterationStyleTimes
 }
 
 func (t *times) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
@@ -233,8 +241,8 @@ func (t *itRange) Label() string {
 	return iterLabel(t)
 }
 
-func (t *itRange) IterationStyle() api.IterationStyle {
-	return api.IterationStyleRange
+func (t *itRange) IterationStyle() wfapi.IterationStyle {
+	return wfapi.IterationStyleRange
 }
 
 func (t *itRange) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
