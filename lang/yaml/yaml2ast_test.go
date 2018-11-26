@@ -49,7 +49,7 @@ func ExampleActivity() {
 		}
 		ast := YamlToAST(ctx, path, content)
 		ctx.AddDefinitions(ast)
-		_, err = ctx.Evaluator().Evaluate(ctx, ast)
+		_, err = eval.TopEvaluate(ctx, ast)
 		if err != nil {
 			return err
 		}

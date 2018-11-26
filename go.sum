@@ -27,8 +27,9 @@ github.com/puppetlabs/data-protobuf v0.0.0-20181112120528-77dff819c942 h1:WlRxyR
 github.com/puppetlabs/data-protobuf v0.0.0-20181112120528-77dff819c942/go.mod h1:sNvzkzCGeUn+Umk++a+iurKO3ez/Q4xZJ8S91N0/dK8=
 github.com/puppetlabs/go-evaluator v0.0.0-20181112120037-0421d4ad8c2a/go.mod h1:Ops8V6sk18CVxf3APDN+xaKnyu4H0zoHM/GBi7vsYM0=
 github.com/puppetlabs/go-evaluator v0.0.0-20181123140848-828fd052b205/go.mod h1:rLXuJMwuD57Nu9AigrgggBy++SPStckY4vvGGqs63CI=
-github.com/puppetlabs/go-evaluator v0.0.0-20181126141136-e9466bed76a5 h1:Tr7bHDbP309gURPn4OsOG2jbkL1qKZP2Wiw9vF10Hao=
 github.com/puppetlabs/go-evaluator v0.0.0-20181126141136-e9466bed76a5/go.mod h1:b/yhn2i6Zn1Qxur9RkJCzMyYtwlUmPNZKeJbEB8Kl6U=
+github.com/puppetlabs/go-evaluator v0.0.0-20181126214729-ca090039f099 h1:nYigjx5SoMzYjDKvE6p3H1qhuKuLg7vHUdNqFllEO8w=
+github.com/puppetlabs/go-evaluator v0.0.0-20181126214729-ca090039f099/go.mod h1:b/yhn2i6Zn1Qxur9RkJCzMyYtwlUmPNZKeJbEB8Kl6U=
 github.com/puppetlabs/go-hiera v0.0.0-20181123211810-82efa30c9da5 h1:QsvkAtnGOWp+4fvIxW8QuXuCLZ0tgndgcWtRJjfn02Q=
 github.com/puppetlabs/go-hiera v0.0.0-20181123211810-82efa30c9da5/go.mod h1:/Nd+yu5INT0AJLNIT+Rm+RMqFgtrZDijPTdjny6Nrtc=
 github.com/puppetlabs/go-issues v0.0.0-20181112112915-c16bc8ecd50f h1:HKZK7Rk8LAmQqWagoWSBYvR8Oeu6mN7fTK1bMb24ZaE=
@@ -38,8 +39,8 @@ github.com/puppetlabs/go-parser v0.0.0-20181118152317-c256ff6e2436/go.mod h1:mzl
 github.com/puppetlabs/go-parser v0.0.0-20181126141003-73360f01354f h1:i6eCFL9uUFXv4uhWHsRqONbm+9aYP0u0LsBzXBIs/y8=
 github.com/puppetlabs/go-parser v0.0.0-20181126141003-73360f01354f/go.mod h1:mzl9cu/FM5LiQqN3fdTCKolOH4YT9bmv1y3TB4SFJj8=
 github.com/puppetlabs/go-pspec v0.0.0-20181112122528-e1b02a406a5c/go.mod h1:AczfVVcwbmNp8hvoIO4JbhRJgaNN2laFz1pNbLdP24A=
-github.com/puppetlabs/go-puppet-dsl-workflow v0.0.0-20181126145816-ea2d6a8bbb2a h1:/DmC+j4xlug37i+CKs21h7KVzqhWp+XE+n3c61M3l88=
-github.com/puppetlabs/go-puppet-dsl-workflow v0.0.0-20181126145816-ea2d6a8bbb2a/go.mod h1:qWObWYqYlBx2sfMZwCEaY4S8hvqE84Eza0yCpNa/AlQ=
+github.com/puppetlabs/go-puppet-dsl-workflow v0.0.0-20181126215040-7b645fb070fe h1:kmSZNWrYqE7mIwKBZol/kPeRm/XlO0XG0M6oeEeB4rk=
+github.com/puppetlabs/go-puppet-dsl-workflow v0.0.0-20181126215040-7b645fb070fe/go.mod h1:RdGdAtuMWYi52bTiLtRr5wq30mpT8jI5fifGagz2q3k=
 github.com/puppetlabs/go-semver v0.0.0-20181112101422-34eb86658f1c h1:ZzqxVdjOl6/NZeKsgckQYO682n2xTj2JGnDr6kstlo4=
 github.com/puppetlabs/go-semver v0.0.0-20181112101422-34eb86658f1c/go.mod h1:mHMsrjAtYQ5mBpZ5z4RMRRkVzErA4fnTdrV/QH8UPdQ=
 github.com/puppetlabs/go-servicesdk v0.0.0-20181126144827-08a39983be1c h1:OgKP3mJk/4UCl6qb7QR/3b71FRFXK4qaoKlXVzxJeDU=
