@@ -33,13 +33,13 @@ func (a *action) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 
 	switch op {
 	case wfapi.Read:
-		return invokable.Invoke(a.name, `read`, input).(eval.OrderedMap)
+		return invokable.Invoke(c, a.name, `read`, input).(eval.OrderedMap)
 
 	case wfapi.Upsert:
-		return invokable.Invoke(a.name, `upsert`, input).(eval.OrderedMap)
+		return invokable.Invoke(c, a.name, `upsert`, input).(eval.OrderedMap)
 
 	case wfapi.Delete:
-		invokable.Invoke(a.name, `delete`, input)
+		invokable.Invoke(c, a.name, `delete`, input)
 		return eval.EMPTY_MAP
 	default:
 		panic(eval.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))

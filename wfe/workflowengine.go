@@ -142,7 +142,7 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
 	vp.add(s, s.Input())
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.exists(fa.Identifier()) {
+		if fa.When() == condition.Always || identity.exists(c, fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
@@ -150,7 +150,7 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
 	ni.Reset()
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.exists(fa.Identifier()) {
+		if fa.When() == condition.Always || identity.exists(c, fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))

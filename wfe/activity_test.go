@@ -163,15 +163,15 @@ func (m *mockIdentity) RemoveInternal(internalID string) error {
 func withTestLoader(c eval.Context, s serviceapi.Service, doer func(eval.Context)) {
 	tl := eval.NewParentedLoader(c.Loader())
 	c.DoWithLoader(tl, func() {
-		addService(tl, s)
-		addService(tl, createMockIdentityService())
+		addService(c, tl, s)
+		addService(c, tl, createMockIdentityService())
 		doer(c)
 	})
 }
 
-func addService(tl eval.DefiningLoader, s serviceapi.Service) {
-	tl.SetEntry(s.Identifier(), eval.NewLoaderEntry(s, nil))
-	_, md := s.Metadata()
+func addService(c eval.Context, tl eval.DefiningLoader, s serviceapi.Service) {
+	tl.SetEntry(s.Identifier(c), eval.NewLoaderEntry(s, nil))
+	_, md := s.Metadata(c)
 	for _, def := range md {
 		tl.SetEntry(def.Identifier(), eval.NewLoaderEntry(def, nil))
 		if handlerFor, ok := def.Properties().Get4(`handler_for`); ok {

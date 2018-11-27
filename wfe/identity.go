@@ -19,17 +19,17 @@ func wrapString(s string) eval.Value {
 	return types.WrapString(s)
 }
 
-func (i *identity) associate(internalID, externalID string) {
-	i.invokable.Invoke(i.id, `associate`, wrapString(internalID), wrapString(externalID))
+func (i *identity) associate(c eval.Context, internalID, externalID string) {
+	i.invokable.Invoke(c, i.id, `associate`, wrapString(internalID), wrapString(externalID))
 }
 
-func (i *identity) exists(internalId string) bool {
-	result := i.invokable.Invoke(i.id, `get_external`, wrapString(internalId)).(eval.List)
+func (i *identity) exists(c eval.Context, internalId string) bool {
+	result := i.invokable.Invoke(c, i.id, `get_external`, wrapString(internalId)).(eval.List)
 	return result.At(1).(*types.BooleanValue).Bool()
 }
 
-func (i *identity) getExternal(internalId string, required bool) (externalID string, ok bool) {
-	result := i.invokable.Invoke(i.id, `get_external`, wrapString(internalId)).(eval.List)
+func (i *identity) getExternal(c eval.Context, internalId string, required bool) (externalID string, ok bool) {
+	result := i.invokable.Invoke(c, i.id, `get_external`, wrapString(internalId)).(eval.List)
 	if result.At(1).(*types.BooleanValue).Bool() {
 		return result.At(0).String(), true
 	}
@@ -39,20 +39,20 @@ func (i *identity) getExternal(internalId string, required bool) (externalID str
 	return ``, false
 }
 
-func (i *identity) getInternal(externalID string) (internalID string, ok bool) {
-	result := i.invokable.Invoke(i.id, `get_internal`, wrapString(externalID)).(eval.List)
+func (i *identity) getInternal(c eval.Context, externalID string) (internalID string, ok bool) {
+	result := i.invokable.Invoke(c, i.id, `get_internal`, wrapString(externalID)).(eval.List)
 	if result.At(1).(*types.BooleanValue).Bool() {
 		return result.At(0).String(), true
 	}
 	return ``, false
 }
 
-func (i *identity) removeExternal(externalID string) {
-	i.invokable.Invoke(i.id, `remove_external`,wrapString(externalID))
+func (i *identity) removeExternal(c eval.Context, externalID string) {
+	i.invokable.Invoke(c, i.id, `remove_external`,wrapString(externalID))
 }
 
-func (i *identity) removeInternal(internalID string) {
-	i.invokable.Invoke(i.id, `remove_internal`, wrapString(internalID))
+func (i *identity) removeInternal(c eval.Context, internalID string) {
+	i.invokable.Invoke(c, i.id, `remove_internal`, wrapString(internalID))
 }
 
 var IdentityId = eval.NewTypedName(eval.NsDefinition, serviceapi.IdentityName)

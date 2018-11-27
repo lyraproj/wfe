@@ -54,7 +54,7 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	explicitExtId := extId != nil
 	if !explicitExtId {
 		// external id must exist in order to do a read or delete
-		if s, ok := identity.getExternal(r.Identifier(), op == wfapi.Read || op == wfapi.Delete); ok {
+		if s, ok := identity.getExternal(c, r.Identifier(), op == wfapi.Read || op == wfapi.Delete); ok {
 			extId = types.WrapString(s)
 		}
 	}
@@ -63,45 +63,45 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	hn := handlerDef.Identifier().Name()
 	switch op {
 	case wfapi.Read:
-		result = handler.Invoke(hn, `read`, extId).(eval.OrderedMap)
+		result = handler.Invoke(c, hn, `read`, extId).(eval.OrderedMap)
 
 	case wfapi.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
-			result = handler.Invoke(hn, `read`, extId).(eval.OrderedMap)
+			result = handler.Invoke(c, hn, `read`, extId).(eval.OrderedMap)
 			break
 		}
 
-		desiredState := r.GetService(c).State(r.name, input)
+		desiredState := r.GetService(c).State(c, r.name, input)
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
-			rt := handler.Invoke(hn, `create`, desiredState).(eval.List)
+			rt := handler.Invoke(c, hn, `create`, desiredState).(eval.List)
 			result = rt.At(0)
 			extId := rt.At(1).String()
-			identity.associate(r.Identifier(), extId)
+			identity.associate(c, r.Identifier(), extId)
 			break
 		}
 
 		// Update existing content. If an update method exists, call it. If not, then fall back
 		// to delete + create
 		if _, ok := crd.Member(`update`); ok {
-			result = handler.Invoke(hn, `update`, extId, desiredState).(eval.OrderedMap)
+			result = handler.Invoke(c, hn, `update`, extId, desiredState).(eval.OrderedMap)
 			break
 		}
-		handler.Invoke(hn, `delete`, extId)
-		identity.removeExternal(extId.String())
+		handler.Invoke(c, hn, `delete`, extId)
+		identity.removeExternal(c, extId.String())
 
-		rt := handler.Invoke(hn, `create`, desiredState)
+		rt := handler.Invoke(c, hn, `create`, desiredState)
 		rl := rt.(eval.List)
 		result = rl.At(0)
 		extId = rl.At(1)
-		identity.associate(r.Identifier(), extId.String())
+		identity.associate(c, r.Identifier(), extId.String())
 
 	case wfapi.Delete:
 		if !explicitExtId {
-			handler.Invoke(hn, `delete`, extId)
-			identity.removeExternal(extId.String())
+			handler.Invoke(c, hn, `delete`, extId)
+			identity.removeExternal(c, extId.String())
 		}
 		return eval.EMPTY_MAP
 	default:

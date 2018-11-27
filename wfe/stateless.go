@@ -31,7 +31,7 @@ func (s *stateless) Init(d serviceapi.Definition) {
 
 func (s *stateless) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	service := s.GetService(ctx)
-	result := service.Invoke(s.Name(), `do`, input)
+	result := service.Invoke(ctx, s.Name(), `do`, input)
 	if m, ok := result.(eval.OrderedMap); ok {
 		return m
 	}
