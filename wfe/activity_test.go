@@ -90,7 +90,7 @@ func withSampleLocalService(sf func(eval.Context)) {
 func ExampleRemoteActivity() {
 	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
 	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	withSampleLocalService(func(c eval.Context) {
+	withSampleService(func(c eval.Context) {
 		wf := CreateActivity(GetDefinition(c, eval.NewTypedName(eval.NsDefinition, `attach`)))
 		result := wf.Run(c, eval.EMPTY_MAP)
 		fmt.Println(eval.ToPrettyString(result))
