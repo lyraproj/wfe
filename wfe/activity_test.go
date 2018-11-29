@@ -38,18 +38,15 @@ var sampleData = eval.Wrap(nil, map[string]interface{}{
 			`count`: 5,
 		}}}).(*types.HashValue)
 
-func provider(c lookup.Invocation, key string, _ eval.OrderedMap) eval.Value {
-	if v, ok := sampleData.Get4(key); ok {
-		return v
-	}
-	c.NotFound()
-	return nil
+func provider(c lookup.ProviderContext, key string, _ eval.OrderedMap) (eval.Value, bool) {
+	v, ok := sampleData.Get4(key)
+	return v, ok
 }
 
 func withSampleService(sf func(eval.Context)) {
 	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
 	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	lookup.DoWithParent(context.Background(), provider, func(ctx lookup.Context) {
+	lookup.DoWithParent(context.Background(), provider, func(ctx eval.Context) {
 		// Command to start plug-in and read a given manifest
 		testRoot := `../../go-puppet-dsl-workflow`
 		cmd := exec.Command("go", "run", testRoot + "/main/main.go", testRoot + `/puppet/testdata/attach.pp`)
@@ -79,7 +76,7 @@ func withSampleService(sf func(eval.Context)) {
 func withSampleLocalService(sf func(eval.Context)) {
 	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
 	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	lookup.DoWithParent(context.Background(), provider, func(ctx lookup.Context) {
+	lookup.DoWithParent(context.Background(), provider, func(ctx eval.Context) {
 		testRoot := `../../go-puppet-dsl-workflow`
 		service := puppet.CreateService(ctx, `Puppet`, testRoot + `/puppet/testdata/attach.pp`)
 		ctx.Scope().Set(ActivityContextKey, types.SingletonHash2(`operation`, types.WrapInteger(int64(wfapi.Upsert))))
