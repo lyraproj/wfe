@@ -30,21 +30,19 @@ func (i *identity) exists(c eval.Context, internalId string) bool {
 
 func (i *identity) getExternal(c eval.Context, internalId string, required bool) (externalID string, ok bool) {
 	result := i.invokable.Invoke(c, i.id, `get_external`, wrapString(internalId)).(eval.List)
-	if result.At(1).(*types.BooleanValue).Bool() {
-		return result.At(0).String(), true
-	}
-	if required {
+	externalID = result.At(0).String()
+	ok = externalID != ``
+	if !ok && required {
 		panic(eval.Error(WF_UNABLE_TO_DETERMINE_EXTERNAL_ID, issue.H{`id`: internalId}))
 	}
-	return ``, false
+	return
 }
 
 func (i *identity) getInternal(c eval.Context, externalID string) (internalID string, ok bool) {
 	result := i.invokable.Invoke(c, i.id, `get_internal`, wrapString(externalID)).(eval.List)
-	if result.At(1).(*types.BooleanValue).Bool() {
-		return result.At(0).String(), true
-	}
-	return ``, false
+	internalID = result.At(0).String()
+	ok = internalID != ``
+	return
 }
 
 func (i *identity) removeExternal(c eval.Context, externalID string) {

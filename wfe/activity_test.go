@@ -49,7 +49,7 @@ func withSampleService(sf func(eval.Context)) {
 	lookup.DoWithParent(context.Background(), provider, nil, func(ctx eval.Context) {
 		// Command to start plug-in and read a given manifest
 		testRoot := `../../go-puppet-dsl-workflow`
-		cmd := exec.Command("go", "run", testRoot + "/main/main.go", testRoot + `/puppet/testdata/attach.pp`)
+		cmd := exec.Command("go", "run", testRoot + "/main.go", testRoot + `/puppet/testdata/attach.pp`)
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{

@@ -67,5 +67,5 @@ func (l *serviceLoader) Parent() eval.Loader {
 }
 
 func ServiceLoader(parent eval.Loader) *serviceLoader {
-	return &serviceLoader{ParentedLoader: eval.NewParentedLoader(parent).(eval.ParentedLoader)}
+	return &serviceLoader{ParentedLoader: eval.NewParentedLoader(parent).(eval.ParentedLoader), services: make(map[string]eval.LoaderEntry), loadLocks: make(map[string]sync.Mutex)}
 }
