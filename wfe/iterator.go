@@ -2,14 +2,14 @@ package wfe
 
 import (
 	"fmt"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/impl"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-issues/issue"
-	"github.com/puppetlabs/go-servicesdk/service"
-	"github.com/puppetlabs/go-servicesdk/serviceapi"
-	"github.com/puppetlabs/go-servicesdk/wfapi"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/impl"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/servicesdk/service"
+	"github.com/lyraproj/servicesdk/serviceapi"
+	"github.com/lyraproj/servicesdk/wfapi"
 	"sync/atomic"
 )
 

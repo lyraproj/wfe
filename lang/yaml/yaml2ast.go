@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-issues/issue"
-	"github.com/puppetlabs/go-parser/parser"
-	"github.com/puppetlabs/go-parser/validator"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/puppet-parser/parser"
+	"github.com/lyraproj/puppet-parser/validator"
 	"gopkg.in/yaml.v2"
 )
 

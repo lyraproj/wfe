@@ -1,5 +1,5 @@
  attach:
-   typespace: genesis::aws
+   typespace: lyra::aws
    input:
      region:
        type: String

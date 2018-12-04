@@ -1,12 +1,12 @@
 package typegen
 
 import (
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-semver/semver"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/semver/semver"
 	"reflect"
 	"bytes"
 	// Initialize pcore
-	_ "github.com/puppetlabs/go-evaluator/pcore"
+	_ "github.com/lyraproj/puppet-evaluator/pcore"
 	"fmt"
 )
 

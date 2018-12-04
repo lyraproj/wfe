@@ -1,7 +1,7 @@
 package wfe
 
 import (
-	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/eval"
 )
 
 func Apply(c eval.Context, id string, state eval.PuppetObject) eval.PuppetObject {

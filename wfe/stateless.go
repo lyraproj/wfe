@@ -1,10 +1,10 @@
 package wfe
 
 import (
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-servicesdk/serviceapi"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/servicesdk/serviceapi"
 )
 
 type stateless struct {

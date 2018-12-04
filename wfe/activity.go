@@ -2,13 +2,13 @@ package wfe
 
 import (
 	"fmt"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-issues/issue"
-	"github.com/puppetlabs/go-servicesdk/condition"
-	"github.com/puppetlabs/go-servicesdk/serviceapi"
-	"github.com/puppetlabs/go-servicesdk/wfapi"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/servicesdk/condition"
+	"github.com/lyraproj/servicesdk/serviceapi"
+	"github.com/lyraproj/servicesdk/wfapi"
 	"net/url"
 	"strings"
 )
@@ -153,7 +153,7 @@ func getParameters(key string, props eval.OrderedMap) []eval.Parameter {
 }
 
 func (a *Activity) Identifier() string {
-	return `genesis://puppet.com/` + a.Style() + `/` + url.PathEscape(a.name)
+	return `lyra://puppet.com/` + a.Style() + `/` + url.PathEscape(a.name)
 }
 
 func ResolveInput(ctx eval.Context, a api.Activity, input eval.OrderedMap, p eval.Parameter) eval.Value {

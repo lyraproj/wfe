@@ -3,7 +3,7 @@ package yaml2ast
 import (
 	"strings"
 
-	"github.com/puppetlabs/go-issues/issue"
+	"github.com/lyraproj/issue/issue"
 )
 
 const (

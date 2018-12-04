@@ -3,16 +3,16 @@ package yaml2ast
 import (
 	"context"
 	"fmt"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-fsm/api"
-	"github.com/puppetlabs/go-hiera/lookup"
-	"github.com/puppetlabs/go-issues/issue"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/hiera/lookup"
+	"github.com/lyraproj/issue/issue"
 	"io/ioutil"
 	"os"
 
 	// Ensure that pcore is initialized
-	_ "github.com/puppetlabs/go-evaluator/pcore"
+	_ "github.com/lyraproj/puppet-evaluator/pcore"
 )
 
 var sampleData = eval.Wrap(nil, map[string]interface{}{

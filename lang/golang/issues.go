@@ -1,6 +1,6 @@
 package golang
 
-import "github.com/puppetlabs/go-issues/issue"
+import "github.com/lyraproj/issue/issue"
 
 const (
 	WF_NOT_STRUCTPTR    = `WF_NOT_STRUCTPTR`

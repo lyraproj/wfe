@@ -2,7 +2,7 @@ package typegen
 
 import (
 	"bytes"
-	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/eval"
 )
 
 type Generator interface {
