@@ -28,21 +28,23 @@ func (i *identity) exists(c eval.Context, internalId string) bool {
 	return result.At(1).(*types.BooleanValue).Bool()
 }
 
-func (i *identity) getExternal(c eval.Context, internalId string, required bool) (externalID string, ok bool) {
-	result := i.invokable.Invoke(c, i.id, `get_external`, wrapString(internalId)).(eval.List)
-	externalID = result.At(0).String()
-	ok = externalID != ``
-	if !ok && required {
+func (i *identity) getExternal(c eval.Context, internalId string, required bool) (string, bool) {
+	result := i.invokable.Invoke(c, i.id, `get_external`, wrapString(internalId))
+	if id, ok := result.(*types.StringValue); ok && id.String() != `` {
+		return id.String(), ok
+	}
+	if required {
 		panic(eval.Error(WF_UNABLE_TO_DETERMINE_EXTERNAL_ID, issue.H{`id`: internalId}))
 	}
-	return
+	return ``, false
 }
 
-func (i *identity) getInternal(c eval.Context, externalID string) (internalID string, ok bool) {
-	result := i.invokable.Invoke(c, i.id, `get_internal`, wrapString(externalID)).(eval.List)
-	internalID = result.At(0).String()
-	ok = internalID != ``
-	return
+func (i *identity) getInternal(c eval.Context, externalID string) (string, bool) {
+	result := i.invokable.Invoke(c, i.id, `get_internal`, wrapString(externalID))
+	if id, ok := result.(*types.StringValue); ok && id.String() != `` {
+		return id.String(), ok
+	}
+	return ``, false
 }
 
 func (i *identity) removeExternal(c eval.Context, externalID string) {

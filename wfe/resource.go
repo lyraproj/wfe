@@ -63,6 +63,9 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	hn := handlerDef.Identifier().Name()
 	switch op {
 	case wfapi.Read:
+		if extId == nil {
+			return eval.EMPTY_MAP
+		}
 		result = handler.Invoke(c, hn, `read`, extId).(eval.OrderedMap)
 
 	case wfapi.Upsert:
@@ -78,8 +81,8 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 			// Nothing exists yet. Create a new instance
 			rt := handler.Invoke(c, hn, `create`, desiredState).(eval.List)
 			result = rt.At(0)
-			extId := rt.At(1).String()
-			identity.associate(c, r.Identifier(), extId)
+			extId = rt.At(1)
+			identity.associate(c, r.Identifier(), extId.String())
 			break
 		}
 
