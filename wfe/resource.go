@@ -1,20 +1,21 @@
 package wfe
 
 import (
+	"github.com/hashicorp/go-hclog"
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/wfe/api"
 	"net/url"
 )
 
 type resource struct {
 	Activity
-	typ   eval.ObjectType
+	typ     eval.ObjectType
 	handler eval.TypedName
-	extId eval.Value
+	extId   eval.Value
 }
 
 func Resource(def serviceapi.Definition) api.Activity {
@@ -59,20 +60,20 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 		}
 	}
 
-	var result eval.Value
+	var result eval.PuppetObject
 	hn := handlerDef.Identifier().Name()
 	switch op {
 	case wfapi.Read:
 		if extId == nil {
 			return eval.EMPTY_MAP
 		}
-		result = handler.Invoke(c, hn, `read`, extId).(eval.OrderedMap)
+		result = eval.AssertInstance(handlerDef.Label, r.typ, handler.Invoke(c, hn, `read`, extId)).(eval.PuppetObject)
 
 	case wfapi.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
-			result = handler.Invoke(c, hn, `read`, extId).(eval.OrderedMap)
+			result = handler.Invoke(c, hn, `read`, extId).(eval.PuppetObject)
 			break
 		}
 
@@ -80,26 +81,47 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
 			rt := handler.Invoke(c, hn, `create`, desiredState).(eval.List)
-			result = rt.At(0)
+			result = eval.AssertInstance(handlerDef.Label, r.typ, rt.At(0)).(eval.PuppetObject)
 			extId = rt.At(1)
 			identity.associate(c, r.Identifier(), extId.String())
 			break
 		}
 
-		// Update existing content. If an update method exists, call it. If not, then fall back
-		// to delete + create
-		if _, ok := crd.Member(`update`); ok {
-			result = handler.Invoke(c, hn, `update`, extId, desiredState).(eval.OrderedMap)
-			break
+		// Read current state and check if an update is needed
+		updateNeeded := false
+		currentState := eval.AssertInstance(handlerDef.Label, r.typ, handler.Invoke(c, hn, `read`, extId)).(eval.PuppetObject)
+		for _, a := range r.typ.AttributesInfo().Attributes() {
+			dv := a.Get(desiredState)
+			if a.Kind() == types.GIVEN_OR_DERIVED && dv.Equals(eval.UNDEF, nil) {
+				continue
+			}
+			av := a.Get(currentState)
+			if !dv.Equals(av, nil) {
+				hclog.Default().Debug("attribute mismatch", "attribute", a.Label(), "desired", dv, "actual", av)
+				updateNeeded = true
+				break
+			}
 		}
-		handler.Invoke(c, hn, `delete`, extId)
-		identity.removeExternal(c, extId.String())
 
-		rt := handler.Invoke(c, hn, `create`, desiredState)
-		rl := rt.(eval.List)
-		result = rl.At(0)
-		extId = rl.At(1)
-		identity.associate(c, r.Identifier(), extId.String())
+		if updateNeeded {
+			// Update existing content. If an update method exists, call it. If not, then fall back
+			// to delete + create
+			if _, ok := crd.Member(`update`); ok {
+				result = eval.AssertInstance(handlerDef.Label, r.typ, handler.Invoke(c, hn, `update`, extId, desiredState)).(eval.PuppetObject)
+				break
+			}
+
+			handler.Invoke(c, hn, `delete`, extId)
+			identity.removeExternal(c, extId.String())
+
+			rt := handler.Invoke(c, hn, `create`, desiredState)
+			rl := rt.(eval.List)
+			result = eval.AssertInstance(handlerDef.Label, r.typ, rl.At(0)).(eval.PuppetObject)
+			extId = rl.At(1)
+			identity.associate(c, r.Identifier(), extId.String())
+		} else {
+			result = currentState
+		}
 
 	case wfapi.Delete:
 		if !explicitExtId {
@@ -113,17 +135,12 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 
 	switch op {
 	case wfapi.Read, wfapi.Upsert:
-		if newState, ok := result.(eval.PuppetObject); ok {
-			eval.AssertInstance(handlerDef.Label, r.typ, newState)
-			output := r.Output()
-			entries := make([]*types.HashEntry, len(output))
-			for i, o := range output {
-				entries[i] = r.getValue(o, newState)
-			}
-			return types.WrapHash(entries)
+		output := r.Output()
+		entries := make([]*types.HashEntry, len(output))
+		for i, o := range output {
+			entries[i] = r.getValue(o, result)
 		}
-		c.Logger().Log(eval.INFO, result)
-		panic(eval.Error(WF_OPERATION_DID_NOT_RETURN_STATE, issue.H{`op`: op.String(), `handler`: handlerDef}))
+		return types.WrapHash(entries)
 	}
 	return eval.EMPTY_MAP
 }
