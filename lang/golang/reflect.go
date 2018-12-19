@@ -1,10 +1,10 @@
 package golang
 
 import (
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/impl"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/issue/issue"
 	"reflect"
 )
 
@@ -27,9 +27,10 @@ func ParamsFromStruct(ctx eval.Context, name string, ptr reflect.Type) []eval.Pa
 			outCount := s.NumField()
 			params := make([]eval.Parameter, outCount)
 			r := ctx.Reflector()
+			tags := eval.NewTaggedType(ptr, nil).Tags(ctx)
 			for i := 0; i < outCount; i++ {
 				fld := s.Field(i)
-				name, decl := r.ReflectFieldTags(&fld)
+				name, decl := r.ReflectFieldTags(&fld, tags[fld.Name])
 				params[i] = impl.NewParameter(name, decl.Get5(`type`, types.DefaultAnyType()).(eval.Type), decl.Get5(`value`, nil), false)
 			}
 			return params

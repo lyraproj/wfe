@@ -1,13 +1,13 @@
 package typegen
 
 import (
+	"bytes"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/semver/semver"
 	"reflect"
-	"bytes"
 	// Initialize pcore
-	_ "github.com/lyraproj/puppet-evaluator/pcore"
 	"fmt"
+	_ "github.com/lyraproj/puppet-evaluator/pcore"
 )
 
 func ExampleGenerator_GenerateTypes() {
@@ -22,7 +22,7 @@ func ExampleGenerator_GenerateTypes() {
 	}
 	type ExtendedPerson struct {
 		Person
-		Age    int  `puppet:"type=>Optional[Integer],value=>undef"`
+		Age    *int `puppet:"type=>Optional[Integer],value=>undef"`
 		Active bool `puppet:"name=>enabled"`
 	}
 
@@ -65,7 +65,7 @@ func ExampleGenerator_GenerateTypes() {
 	//         ih['zip_code'] = this.zip_code;
 	//         return ih;
 	//       }
-  //
+	//
 	//       __ptype() : string {
 	//         return 'My::Own::Address';
 	//       }
@@ -97,7 +97,7 @@ func ExampleGenerator_GenerateTypes() {
 	//         ih['address'] = this.address;
 	//         return ih;
 	//       }
-  //
+	//
 	//       __ptype() : string {
 	//         return 'My::Own::Person';
 	//       }
@@ -124,7 +124,7 @@ func ExampleGenerator_GenerateTypes() {
 	//         this.enabled = enabled;
 	//         this.age = age;
 	//       }
-  //
+	//
 	//       __pvalue() : {[s: string]: any} {
 	//         let ih = super.__pvalue();
 	//         ih['enabled'] = this.enabled;
@@ -132,7 +132,7 @@ func ExampleGenerator_GenerateTypes() {
 	//           ih['age'] = this.age;
 	//         return ih;
 	//       }
-  //
+	//
 	//       __ptype() : string {
 	//         return 'My::Own::ExtendedPerson';
 	//       }
