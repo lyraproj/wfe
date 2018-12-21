@@ -5,6 +5,7 @@ import (
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/servicesdk/annotation"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wfapi"
 	"github.com/lyraproj/wfe/api"
@@ -90,11 +91,31 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 		// Read current state and check if an update is needed
 		updateNeeded := false
 		currentState := eval.AssertInstance(handlerDef.Label, r.typ, handler.Invoke(c, hn, `read`, extId)).(eval.PuppetObject)
+
+		// var rels map[string]*annotation.Relationship
+
+		isProvided := func(string) bool { return false }
+		if a, ok := r.typ.Annotations().Get(annotation.ResourceType); ok {
+			ra := a.(annotation.Resource)
+			// rels = ra.Relationships()
+			pva := ra.ProvidedAttributes()
+			if pva != nil && len(pva) > 0 {
+				isProvided = func(name string) bool {
+					for _, pv := range pva {
+						if pv == name {
+							return true
+						}
+					}
+					return false
+				}
+			}
+		}
+
 		for _, a := range r.typ.AttributesInfo().Attributes() {
-			dv := a.Get(desiredState)
-			if a.Kind() == types.GIVEN_OR_DERIVED && dv.Equals(eval.UNDEF, nil) {
+			if isProvided(a.Name()) {
 				continue
 			}
+			dv := a.Get(desiredState)
 			av := a.Get(currentState)
 			if !dv.Equals(av, nil) {
 				hclog.Default().Debug("attribute mismatch", "attribute", a.Label(), "desired", dv, "actual", av)
