@@ -95,7 +95,7 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 		// var rels map[string]*annotation.Relationship
 
 		isProvided := func(string) bool { return false }
-		if a, ok := r.typ.Annotations().Get(annotation.ResourceType); ok {
+		if a, ok := r.typ.Annotations(c).Get(annotation.ResourceType); ok {
 			ra := a.(annotation.Resource)
 			// rels = ra.Relationships()
 			pva := ra.ProvidedAttributes()
