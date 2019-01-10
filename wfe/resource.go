@@ -112,10 +112,10 @@ func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 		}
 
 		for _, a := range r.typ.AttributesInfo().Attributes() {
-			if isProvided(a.Name()) {
+			dv := a.Get(desiredState)
+			if isProvided(a.Name()) && a.Default(dv) {
 				continue
 			}
-			dv := a.Get(desiredState)
 			av := a.Get(currentState)
 			if !dv.Equals(av, nil) {
 				hclog.Default().Debug("attribute mismatch", "attribute", a.Label(), "desired", dv, "actual", av)
