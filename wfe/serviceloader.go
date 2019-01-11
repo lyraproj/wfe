@@ -7,9 +7,9 @@ import (
 
 type serviceLoader struct {
 	eval.ParentedLoader
-	lock sync.Mutex
-	services map[string] eval.LoaderEntry
-	loadLocks map[string] sync.Mutex
+	lock      sync.Mutex
+	services  map[string]eval.LoaderEntry
+	loadLocks map[string]sync.Mutex
 }
 
 // LoadEntry returns the requested entry or nil if no such entry can be found

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-parser/parser"
 	"github.com/lyraproj/puppet-parser/validator"
 	"gopkg.in/yaml.v2"

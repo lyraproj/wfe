@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/servicesdk/wfapi"
 )
 
@@ -19,6 +19,9 @@ type Activity interface {
 	// is guaranteed to remain stable across invocations provided that no activity names, resource types
 	// or iterator inputs changes within the parent chain of this Activity.
 	Identifier() string
+
+	// The Id of the service that provices this activity
+	ServiceId() eval.TypedName
 
 	// Style returns the activity style, 'workflow', 'resource', 'action', or the generic 'activity'.
 	Style() string
