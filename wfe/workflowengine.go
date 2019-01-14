@@ -3,11 +3,12 @@ package wfe
 import (
 	"bytes"
 	"fmt"
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/servicesdk/condition"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/wfe/service"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -21,7 +22,7 @@ import (
 type WorkflowEngine interface {
 	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 
-	BuildInvertedGraph(ctx eval.Context)
+	BuildInvertedGraph(ctx eval.Context, existsFunc func(string) bool)
 
 	GraphAsDot() []byte
 
@@ -47,7 +48,7 @@ func appendParameterNames(params []eval.Parameter, b *bytes.Buffer) {
 
 func (a *serverActivity) Attributes() []encoding.Attribute {
 	b := bytes.NewBufferString(`"`)
-	b.WriteString(LeafName(a))
+	b.WriteString(service.LeafName(a.Name()))
 	b.WriteByte('{')
 	b.WriteString("\ninput:[")
 	appendParameterNames(a.Input(), b)
@@ -58,7 +59,7 @@ func (a *serverActivity) Attributes() []encoding.Attribute {
 }
 
 func (a *serverActivity) DOTID() string {
-	return LeafName(a)
+	return service.LeafName(a.Name())
 }
 
 func (a *serverActivity) SetResolved() {
@@ -122,14 +123,13 @@ func (s *workflowEngine) GraphAsDot() []byte {
 	return de
 }
 
-func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
+func (s *workflowEngine) BuildInvertedGraph(c eval.Context, existsFunc func(string) bool) {
 	g := s.graph
 	ni := g.Nodes()
 	if ni == nil {
 		return
 	}
 
-	// Build a map that associates a produced value with the producer of that value
 	ei := g.Edges()
 	for ei.Next() {
 		e := ei.Edge()
@@ -137,12 +137,11 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
 	}
 
 	// Add workflow as the producer of input with values.
-	identity := getIdentity(c)
 	vp := make(valueProducers, ni.Len()*5)
 	vp.add(s, s.Input())
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.exists(c, fa.Identifier()) {
+		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
@@ -150,7 +149,7 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context) {
 	ni.Reset()
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || identity.exists(c, fa.Identifier()) {
+		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))
@@ -358,7 +357,8 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
 	}
 
-	nextName: for _, name := range a.When().Names() {
+nextName:
+	for _, name := range a.When().Names() {
 		for _, param := range a.Input() {
 			if name == param.Name() {
 				continue nextName

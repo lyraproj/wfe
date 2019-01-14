@@ -2,14 +2,14 @@ package wfe
 
 import (
 	"fmt"
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/impl"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/wfe/api"
+	"github.com/lyraproj/wfe/service"
 	"sync/atomic"
 )
 
@@ -25,8 +25,8 @@ type iterator struct {
 func Iterator(def serviceapi.Definition) api.Activity {
 	over := getParameters(`over`, def.Properties())
 	variables := getParameters(`variables`, def.Properties())
-	style := wfapi.NewIterationStyle(GetStringProperty(def, `iteration_style`))
-	activity := CreateActivity(GetProperty(def, `producer`, service.Definition_Type).(serviceapi.Definition))
+	style := wfapi.NewIterationStyle(service.GetStringProperty(def, `iteration_style`))
+	activity := CreateActivity(service.GetProperty(def, `producer`, serviceapi.Definition_Type).(serviceapi.Definition))
 	resultName := wfapi.LeafName(def.Identifier().Name())
 	switch style {
 	case wfapi.IterationStyleRange:

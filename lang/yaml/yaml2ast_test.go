@@ -3,11 +3,11 @@ package yaml2ast
 import (
 	"context"
 	"fmt"
+	"github.com/lyraproj/hiera/lookup"
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
 	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/hiera/lookup"
-	"github.com/lyraproj/issue/issue"
 	"io/ioutil"
 	"os"
 

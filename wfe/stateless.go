@@ -3,8 +3,8 @@ package wfe
 import (
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/servicesdk/serviceapi"
+	"github.com/lyraproj/wfe/api"
 )
 
 type stateless struct {
