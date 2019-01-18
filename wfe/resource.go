@@ -45,10 +45,8 @@ func (r *resource) Init(d serviceapi.Definition) {
 
 func (r *resource) Identifier() string {
 	vs := make(url.Values, 3)
-	vs.Add(`resource_type`, r.typ.Name())
-	if r.extId != nil {
-		vs.Add(`external_id`, r.extId.String())
-	}
+	vs.Add(`rt`, r.typ.Name())
+	vs.Add(`hid`, r.HandlerId().Name())
 	return r.Activity.Identifier() + `?` + vs.Encode()
 }
 

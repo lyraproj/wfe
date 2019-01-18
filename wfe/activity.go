@@ -1,6 +1,7 @@
 package wfe
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
@@ -11,6 +12,7 @@ import (
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 	"net/url"
+	"strings"
 )
 
 type Activity struct {
@@ -94,7 +96,12 @@ func getParameters(key string, props eval.OrderedMap) []eval.Parameter {
 }
 
 func (a *Activity) Identifier() string {
-	return `lyra://puppet.com/` + a.Style() + `/` + url.PathEscape(a.name)
+	b := bytes.NewBufferString(`lyra://puppet.com`)
+	for _, s := range strings.Split(a.name, `::`) {
+		b.WriteByte('/')
+		b.WriteString(url.PathEscape(s))
+	}
+	return b.String()
 }
 
 func ResolveInput(ctx eval.Context, a api.Activity, input eval.OrderedMap, p eval.Parameter) eval.Value {

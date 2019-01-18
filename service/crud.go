@@ -9,6 +9,37 @@ import (
 	"github.com/lyraproj/wfe/api"
 )
 
+func StartEra(c eval.Context) {
+	getIdentity(c).bumpEra(c)
+}
+
+// SweepAndGC performs a sweep of the Identity store, retrieves all garbage, and
+// then tells the handler for each garbage entry to delete the resource. The entry
+// is then purged from the Identity store
+func SweepAndGC(c eval.Context, prefix string) {
+	identity := getIdentity(c)
+	identity.sweep(c, prefix)
+	gl := identity.garbage(c)
+	ng := gl.Len()
+	rs := make([]eval.List, ng)
+
+	// Store in reverse order
+	ng--
+	gl.EachWithIndex(func(t eval.Value, i int) {
+		rs[ng-i] = t.(eval.List)
+	})
+
+	for _, l := range rs {
+		hid := types.ParseURI(l.At(0).String()).Query().Get(`hid`)
+		handlerDef := GetHandler(c, eval.NewTypedName(eval.NsHandler, hid))
+		handler := GetService(c, handlerDef.ServiceId())
+
+		extId := l.At(1)
+		handler.Invoke(c, handlerDef.Identifier().Name(), `delete`, extId)
+		identity.purgeExternal(c, extId)
+	}
+}
+
 func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) eval.OrderedMap {
 	ac := ActivityContext(c)
 	op := GetOperation(ac)

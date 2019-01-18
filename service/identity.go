@@ -17,6 +17,30 @@ func (i *identity) associate(c eval.Context, internalID, externalID eval.Value) 
 	i.invokable.Invoke(c, i.id, `associate`, internalID, externalID)
 }
 
+func (i *identity) bumpEra(c eval.Context) {
+	i.invokable.Invoke(c, i.id, `bump_era`)
+}
+
+func (i *identity) garbage(c eval.Context) eval.List {
+	result := i.invokable.Invoke(c, i.id, `garbage`)
+	if l, ok := result.(eval.List); ok {
+		return l
+	}
+	return nil
+}
+
+func (i *identity) search(c eval.Context, prefix string) eval.List {
+	result := i.invokable.Invoke(c, i.id, `search`, types.WrapString(prefix))
+	if l, ok := result.(eval.List); ok {
+		return l
+	}
+	return nil
+}
+
+func (i *identity) sweep(c eval.Context, prefix string) {
+	i.invokable.Invoke(c, i.id, `sweep`, types.WrapString(prefix))
+}
+
 func (i *identity) exists(c eval.Context, internalId eval.Value) bool {
 	result := i.invokable.Invoke(c, i.id, `get_external`, internalId).(eval.List)
 	return result.At(1).(*types.BooleanValue).Bool()
@@ -39,6 +63,14 @@ func (i *identity) getInternal(c eval.Context, externalID eval.Value) (eval.Valu
 		return id, ok
 	}
 	return nil, false
+}
+
+func (i *identity) purgeExternal(c eval.Context, externalID eval.Value) {
+	i.invokable.Invoke(c, i.id, `purge_external`, externalID)
+}
+
+func (i *identity) purgeInternal(c eval.Context, internalID eval.Value) {
+	i.invokable.Invoke(c, i.id, `purge_internal`, internalID)
 }
 
 func (i *identity) removeExternal(c eval.Context, externalID eval.Value) {
