@@ -304,7 +304,7 @@ func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.Order
 
 	// Run all nodes that can run, i.e. root nodes
 	ni := s.graph.Nodes()
-	if ni == nil {
+	if ni == nil || ni.Len() == 0 {
 		return nil
 	}
 
