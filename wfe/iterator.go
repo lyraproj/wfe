@@ -192,7 +192,7 @@ nextVar:
 }
 
 func assertInt(t api.Iterator, arg eval.Value, paramIdx int) int64 {
-	iv, ok := arg.(*types.IntegerValue)
+	iv, ok := arg.(eval.IntegerValue)
 	if !ok {
 		panic(eval.Error(WF_ITERATION_PARAMETER_WRONG_TYPE, issue.H{
 			`iterator`: t, `parameter`: t.Over()[paramIdx].Name(), `expected`: `Integer`, `actual`: arg.PType()}))

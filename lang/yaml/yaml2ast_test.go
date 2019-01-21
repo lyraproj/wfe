@@ -35,8 +35,8 @@ func provider(c lookup.ProviderContext, key string, _ map[string]eval.Value) (ev
 }
 
 func ExampleActivity() {
-	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
-	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
+	eval.Puppet.Set(`tasks`, types.BooleanTrue)
+	eval.Puppet.Set(`workflow`, types.BooleanTrue)
 	err := lookup.TryWithParent(context.Background(), provider, nil, func(ctx eval.Context) error {
 		workflowName := `attach`
 		path := `testdata/` + workflowName + `.yaml`

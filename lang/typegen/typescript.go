@@ -249,9 +249,9 @@ func appendTsValue(value eval.Value, bld *bytes.Buffer) {
 	switch value.(type) {
 	case *types.UndefValue:
 		bld.WriteString(`null`)
-	case *types.StringValue:
+	case eval.StringValue:
 		utils.PuppetQuote(bld, value.String())
-	case *types.BooleanValue, *types.IntegerValue, *types.FloatValue:
+	case eval.BooleanValue, eval.IntegerValue, eval.FloatValue:
 		bld.WriteString(value.String())
 	case *types.ArrayValue:
 		bld.WriteByte('[')
@@ -283,7 +283,7 @@ func appendTsType(ns []string, pType eval.Type, bld *bytes.Buffer) {
 		bld.WriteString(`boolean`)
 	case *types.IntegerType, *types.FloatType:
 		bld.WriteString(`number`)
-	case *types.StringType:
+	case eval.StringType:
 		bld.WriteString(`string`)
 	case *types.OptionalType:
 		appendTsType(ns, pType.(*types.OptionalType).ContainedType(), bld)
