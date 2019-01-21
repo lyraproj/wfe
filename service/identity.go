@@ -43,12 +43,12 @@ func (i *identity) sweep(c eval.Context, prefix string) {
 
 func (i *identity) exists(c eval.Context, internalId eval.Value) bool {
 	result := i.invokable.Invoke(c, i.id, `get_external`, internalId).(eval.List)
-	return result.At(1).(*types.BooleanValue).Bool()
+	return result.At(1).(eval.BooleanValue).Bool()
 }
 
 func (i *identity) getExternal(c eval.Context, internalId eval.Value, required bool) eval.Value {
 	result := i.invokable.Invoke(c, i.id, `get_external`, internalId)
-	if id, ok := result.(*types.StringValue); ok && id.String() != `` {
+	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
 		return id
 	}
 	if required {
@@ -59,7 +59,7 @@ func (i *identity) getExternal(c eval.Context, internalId eval.Value, required b
 
 func (i *identity) getInternal(c eval.Context, externalID eval.Value) (eval.Value, bool) {
 	result := i.invokable.Invoke(c, i.id, `get_internal`, externalID)
-	if id, ok := result.(*types.StringValue); ok && id.String() != `` {
+	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
 		return id, ok
 	}
 	return nil, false

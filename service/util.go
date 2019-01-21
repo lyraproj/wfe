@@ -22,7 +22,7 @@ func ActivityContext(c eval.Context) eval.OrderedMap {
 
 func GetOperation(ac eval.OrderedMap) wfapi.Operation {
 	if op, ok := ac.Get4(`operation`); ok {
-		return wfapi.Operation(op.(*types.IntegerValue).Int())
+		return wfapi.Operation(op.(eval.IntegerValue).Int())
 	}
 	return wfapi.Read
 }

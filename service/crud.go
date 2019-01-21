@@ -153,7 +153,7 @@ func getValue(p eval.Parameter, r api.Resource, o eval.PuppetObject) *types.Hash
 			return types.WrapHashEntry2(n, types.WrapHash(entries))
 		}
 
-		if s, ok := v.(*types.StringValue); ok {
+		if s, ok := v.(eval.StringValue); ok {
 			a = s.String()
 		}
 	}
