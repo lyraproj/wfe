@@ -74,16 +74,16 @@ func ExampleGenerator_GenerateTypes() {
 	//     export class Person {
 	//       readonly name: string;
 	//       readonly gender: 'male' | 'female' | 'other';
-	//       readonly address: Address;
+	//       readonly address: Address | null;
 	//
 	//       constructor({
 	//           name,
 	//           gender,
-	//           address
+	//           address = null
 	//         }: {
 	//           name: string,
 	//           gender: 'male' | 'female' | 'other',
-	//           address: Address
+	//           address?: Address | null
 	//         }) {
 	//         this.name = name;
 	//         this.gender = gender;
@@ -94,7 +94,8 @@ func ExampleGenerator_GenerateTypes() {
 	//         let ih: {[s: string]: any} = {};
 	//         ih['name'] = this.name;
 	//         ih['gender'] = this.gender;
-	//         ih['address'] = this.address;
+	//         if(this.address !== null)
+	//           ih['address'] = this.address;
 	//         return ih;
 	//       }
 	//
@@ -110,14 +111,14 @@ func ExampleGenerator_GenerateTypes() {
 	//       constructor({
 	//           name,
 	//           gender,
-	//           address,
 	//           enabled,
+	//           address = null,
 	//           age = null
 	//         }: {
 	//           name: string,
 	//           gender: 'male' | 'female' | 'other',
-	//           address: Address,
 	//           enabled: boolean,
+	//           address?: Address | null,
 	//           age?: number | null
 	//         }) {
 	//         super({name: name, gender: gender, address: address});
