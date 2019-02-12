@@ -22,7 +22,7 @@ func init() {
 	issue.Hard(WF_YAML_DUPLICATE_KEY, `the key '%{key}' is defined more than once. Path %{path}`)
 
 	issue.Hard2(WF_YAML_ILLEGAL_TYPE, `the value must be %{expected}. Got %{actual}. Path %{path}`,
-		issue.HF{`path`: joinPath, `expected`: issue.A_an, `actual`: issue.A_an})
+		issue.HF{`path`: joinPath, `expected`: issue.AnOrA, `actual`: issue.AnOrA})
 
 	issue.Hard(EVAL_ILLEGAL_VARIABLE_NAME, `'%{name}' is not a legal variable name`)
 
