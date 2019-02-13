@@ -20,7 +20,7 @@ var sampleData = eval.Wrap(nil, map[string]interface{}{
 		`region`:  `eu-west-1`,
 		`keyname`: `aws-key-name`,
 		`tags`: map[string]string{
-			`created_by`: `john.mccabe@puppet.com`,
+			`createdBy`:  `john.mccabe@puppet.com`,
 			`department`: `engineering`,
 			`project`:    `incubator`,
 			`lifetime`:   `1h`,

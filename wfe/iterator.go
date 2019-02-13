@@ -25,7 +25,7 @@ type iterator struct {
 func Iterator(def serviceapi.Definition) api.Activity {
 	over := getParameters(`over`, def.Properties())
 	variables := getParameters(`variables`, def.Properties())
-	style := wfapi.NewIterationStyle(service.GetStringProperty(def, `iteration_style`))
+	style := wfapi.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
 	activity := CreateActivity(service.GetProperty(def, `producer`, serviceapi.Definition_Type).(serviceapi.Definition))
 	resultName := wfapi.LeafName(def.Identifier().Name())
 	switch style {

@@ -18,7 +18,7 @@ func (i *identity) associate(c eval.Context, internalID, externalID eval.Value) 
 }
 
 func (i *identity) bumpEra(c eval.Context) {
-	i.invokable.Invoke(c, i.id, `bump_era`)
+	i.invokable.Invoke(c, i.id, `bumpEra`)
 }
 
 func (i *identity) garbage(c eval.Context) eval.List {
@@ -42,12 +42,12 @@ func (i *identity) sweep(c eval.Context, prefix string) {
 }
 
 func (i *identity) exists(c eval.Context, internalId eval.Value) bool {
-	result := i.invokable.Invoke(c, i.id, `get_external`, internalId).(eval.List)
+	result := i.invokable.Invoke(c, i.id, `getExternal`, internalId).(eval.List)
 	return result.At(1).(eval.BooleanValue).Bool()
 }
 
 func (i *identity) getExternal(c eval.Context, internalId eval.Value, required bool) eval.Value {
-	result := i.invokable.Invoke(c, i.id, `get_external`, internalId)
+	result := i.invokable.Invoke(c, i.id, `getExternal`, internalId)
 	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
 		return id
 	}
@@ -58,7 +58,7 @@ func (i *identity) getExternal(c eval.Context, internalId eval.Value, required b
 }
 
 func (i *identity) getInternal(c eval.Context, externalID eval.Value) (eval.Value, bool) {
-	result := i.invokable.Invoke(c, i.id, `get_internal`, externalID)
+	result := i.invokable.Invoke(c, i.id, `getInternal`, externalID)
 	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
 		return id, ok
 	}
@@ -66,19 +66,19 @@ func (i *identity) getInternal(c eval.Context, externalID eval.Value) (eval.Valu
 }
 
 func (i *identity) purgeExternal(c eval.Context, externalID eval.Value) {
-	i.invokable.Invoke(c, i.id, `purge_external`, externalID)
+	i.invokable.Invoke(c, i.id, `purgeExternal`, externalID)
 }
 
 func (i *identity) purgeInternal(c eval.Context, internalID eval.Value) {
-	i.invokable.Invoke(c, i.id, `purge_internal`, internalID)
+	i.invokable.Invoke(c, i.id, `purgeInternal`, internalID)
 }
 
 func (i *identity) removeExternal(c eval.Context, externalID eval.Value) {
-	i.invokable.Invoke(c, i.id, `remove_external`, externalID)
+	i.invokable.Invoke(c, i.id, `removeExternal`, externalID)
 }
 
 func (i *identity) removeInternal(c eval.Context, internalID eval.Value) {
-	i.invokable.Invoke(c, i.id, `remove_internal`, internalID)
+	i.invokable.Invoke(c, i.id, `removeInternal`, internalID)
 }
 
 var IdentityId = eval.NewTypedName(eval.NsDefinition, serviceapi.IdentityName)

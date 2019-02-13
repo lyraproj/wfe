@@ -36,10 +36,10 @@ func Resource(def serviceapi.Definition) api.Activity {
 
 func (r *resource) Init(d serviceapi.Definition) {
 	r.Activity.Init(d)
-	if eid, ok := service.GetOptionalProperty(d, `external_id`, types.DefaultStringType()); ok {
+	if eid, ok := service.GetOptionalProperty(d, `externalId`, types.DefaultStringType()); ok {
 		r.extId = eid
 	}
-	r.typ = service.GetProperty(d, `resource_type`, types.NewTypeType(types.DefaultObjectType())).(eval.ObjectType)
+	r.typ = service.GetProperty(d, `resourceType`, types.NewTypeType(types.DefaultObjectType())).(eval.ObjectType)
 	r.handler = eval.NewTypedName(eval.NsHandler, r.typ.Name())
 }
 
