@@ -37,8 +37,8 @@ func CreateActivity(def serviceapi.Definition) api.Activity {
 		return Resource(def)
 	case `workflow`:
 		return Workflow(def)
-	case `stateless`:
-		return Stateless(def)
+	case `action`:
+		return Action(def)
 	}
 	return nil
 }

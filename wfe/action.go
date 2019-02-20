@@ -8,7 +8,7 @@ import (
 	"github.com/lyraproj/wfe/api"
 )
 
-type stateless struct {
+type action struct {
 	Activity
 	api eval.ObjectType
 }
@@ -17,22 +17,22 @@ var ioType = types.NewHashType(types.DefaultStringType(), types.DefaultRichDataT
 var expectedType = types.NewCallableType(
 	types.NewTupleType([]eval.Type{ioType}, nil), ioType, nil)
 
-func Stateless(def serviceapi.Definition) api.Activity {
-	a := &stateless{}
+func Action(def serviceapi.Definition) api.Activity {
+	a := &action{}
 	a.Init(def)
 	return a
 }
 
-func (s *stateless) Init(d serviceapi.Definition) {
+func (s *action) Init(d serviceapi.Definition) {
 	s.Activity.Init(d)
 	if api, ok := d.Properties().Get4(`interface`); ok {
 		s.api = api.(eval.ObjectType)
 	}
 }
 
-func (s *stateless) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
+func (s *action) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	service := s.GetService(ctx)
-	hclog.Default().Debug(`executing statless activity`, `name`, s.name)
+	hclog.Default().Debug(`executing action`, `name`, s.name)
 	result := service.Invoke(ctx, s.Name(), `do`, input)
 	if m, ok := result.(eval.OrderedMap); ok {
 		return m
@@ -40,10 +40,10 @@ func (s *stateless) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
 	panic(result.String())
 }
 
-func (s *stateless) Label() string {
+func (s *action) Label() string {
 	return ActivityLabel(s)
 }
 
-func (s *stateless) Style() string {
-	return `stateless`
+func (s *action) Style() string {
+	return `action`
 }
