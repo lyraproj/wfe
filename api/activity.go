@@ -23,7 +23,7 @@ type Activity interface {
 	// The Id of the service that provices this activity
 	ServiceId() eval.TypedName
 
-	// Style returns the activity style, 'workflow', 'resource', 'action', or the generic 'activity'.
+	// Style returns the activity style, 'workflow', 'resource', 'stateHandler', or 'action'.
 	Style() string
 
 	// Name returns the fully qualified name of the Activity

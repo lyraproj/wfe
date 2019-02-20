@@ -26,6 +26,8 @@ github.com/lyraproj/puppet-evaluator v0.0.0-20190213111014-f445b297391c/go.mod h
 github.com/lyraproj/puppet-parser v0.0.0-20181212205830-31c3104fe78d/go.mod h1:8va5g/XEw+jP9jnwEXPmanUy/hD9+6iggnaioihPLP0=
 github.com/lyraproj/puppet-parser v0.0.0-20190213110921-6d794c46c75a h1:XG/JMQTVoRZCY9SZgCOZMvCu/hTBFO+ee3fdZ2S2Tac=
 github.com/lyraproj/puppet-parser v0.0.0-20190213110921-6d794c46c75a/go.mod h1:KYBqLHpK7D2FNFp47m9BZfr6Xvd6PnEYOpI31aEGAX0=
+github.com/lyraproj/puppet-parser v0.0.0-20190220141901-9a9df4c25284 h1:/6z4AeaFhR7EU/gpbP766SB0ehLTZTT8bWSEORAHRVM=
+github.com/lyraproj/puppet-parser v0.0.0-20190220141901-9a9df4c25284/go.mod h1:KYBqLHpK7D2FNFp47m9BZfr6Xvd6PnEYOpI31aEGAX0=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
 github.com/lyraproj/servicesdk v0.0.0-20190213111125-9b344bb575d1 h1:f5fbA3fPFgQQYhXnGd5Rx+jg2Px1GnxIqtpMHiDSu8E=

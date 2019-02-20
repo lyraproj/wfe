@@ -50,7 +50,7 @@ func (it *iterator) Producer() api.Activity {
 	return it.Activity
 }
 
-// Input returns the Input declared for the action + Over() and - Variables
+// Input returns the Input declared for the stateHandler + Over() and - Variables
 func (it *iterator) Input() []eval.Parameter {
 	input := it.Producer().Input()
 	all := make([]eval.Parameter, 0, len(it.over)+len(input)-len(it.variables))
