@@ -1,6 +1,7 @@
 package wfe
 
 import (
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
@@ -31,6 +32,7 @@ func (s *stateless) Init(d serviceapi.Definition) {
 
 func (s *stateless) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	service := s.GetService(ctx)
+	hclog.Default().Debug(`executing statless activity`, `name`, s.name)
 	result := service.Invoke(ctx, s.Name(), `do`, input)
 	if m, ok := result.(eval.OrderedMap); ok {
 		return m

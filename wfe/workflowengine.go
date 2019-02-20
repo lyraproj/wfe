@@ -318,7 +318,7 @@ func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.Order
 	for ni.Next() {
 		n := ni.Node()
 		if s.graph.To(n.ID()).Len() == 0 {
-			s.scheduleAction(n.(*serverActivity))
+			s.scheduleActivity(n.(*serverActivity))
 		}
 	}
 	<-s.done
@@ -384,7 +384,7 @@ nextName:
 	return da
 }
 
-// This function represents a worker that spawns actions
+// This function represents a worker that spawns activities
 func (s *workflowEngine) activityWorker(ctx eval.Context, id int) {
 	for a := range s.inbox {
 		s.runActivity(ctx, a)
@@ -428,7 +428,7 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	// however only run once. This is controlled by the runLatch.
 	ni := s.graph.From(a.ID())
 	for ni.Next() {
-		s.scheduleAction(ni.Node().(*serverActivity))
+		s.scheduleActivity(ni.Node().(*serverActivity))
 	}
 }
 
@@ -455,7 +455,7 @@ func (s *workflowEngine) waitForEdgesTo(a *serverActivity) {
 	}
 }
 
-func (s *workflowEngine) scheduleAction(a *serverActivity) {
+func (s *workflowEngine) scheduleActivity(a *serverActivity) {
 	atomic.AddInt32(&s.jobCounter, 1)
 	s.inbox <- a
 }

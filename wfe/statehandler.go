@@ -10,24 +10,24 @@ import (
 	"github.com/lyraproj/wfe/service"
 )
 
-type action struct {
+type stateHandler struct {
 	Activity
 	typ eval.ObjectType
 }
 
-func Action(def serviceapi.Definition) api.Activity {
-	a := &action{}
+func StateHandler(def serviceapi.Definition) api.Activity {
+	a := &stateHandler{}
 	a.Init(def)
 	return a
 }
 
-func (a *action) Init(def serviceapi.Definition) {
+func (a *stateHandler) Init(def serviceapi.Definition) {
 	a.Activity.Init(def)
 	// TODO: Type validation. The typ must be an ObjectType implementing read, upsert, and delete.
 	a.typ = service.GetProperty(def, `interface`, types.NewTypeType(types.DefaultObjectType())).(eval.ObjectType)
 }
 
-func (a *action) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
+func (a *stateHandler) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	ac := service.ActivityContext(c)
 	op := service.GetOperation(ac)
 	invokable := a.GetService(c)
@@ -47,10 +47,10 @@ func (a *action) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
 	}
 }
 
-func (a *action) Label() string {
+func (a *stateHandler) Label() string {
 	return ActivityLabel(a)
 }
 
-func (a *action) Style() string {
-	return `action`
+func (a *stateHandler) Style() string {
+	return `stateHandler`
 }

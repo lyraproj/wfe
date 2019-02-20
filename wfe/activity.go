@@ -3,6 +3,7 @@ package wfe
 import (
 	"bytes"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
@@ -25,9 +26,11 @@ type Activity struct {
 }
 
 func CreateActivity(def serviceapi.Definition) api.Activity {
+	hclog.Default().Debug(`creating activity`, `style`, service.GetStringProperty(def, `style`))
+
 	switch service.GetStringProperty(def, `style`) {
-	case `action`:
-		return Action(def)
+	case `stateHandler`:
+		return StateHandler(def)
 	case `iterator`:
 		return Iterator(def)
 	case `resource`:
