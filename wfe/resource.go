@@ -1,30 +1,31 @@
 package wfe
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"net/url"
+
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
-	"net/url"
 )
 
 type resource struct {
 	Activity
-	typ     eval.ObjectType
-	handler eval.TypedName
-	extId   eval.Value
+	typ     px.ObjectType
+	handler px.TypedName
+	extId   px.Value
 }
 
-func (r *resource) Type() eval.ObjectType {
+func (r *resource) Type() px.ObjectType {
 	return r.typ
 }
 
-func (r *resource) HandlerId() eval.TypedName {
+func (r *resource) HandlerId() px.TypedName {
 	return r.handler
 }
 
-func (r *resource) ExtId() eval.Value {
+func (r *resource) ExtId() px.Value {
 	return r.extId
 }
 
@@ -39,8 +40,8 @@ func (r *resource) Init(d serviceapi.Definition) {
 	if eid, ok := service.GetOptionalProperty(d, `externalId`, types.DefaultStringType()); ok {
 		r.extId = eid
 	}
-	r.typ = service.GetProperty(d, `resourceType`, types.NewTypeType(types.DefaultObjectType())).(eval.ObjectType)
-	r.handler = eval.NewTypedName(eval.NsHandler, r.typ.Name())
+	r.typ = service.GetProperty(d, `resourceType`, types.NewTypeType(types.DefaultObjectType())).(px.ObjectType)
+	r.handler = px.NewTypedName(px.NsHandler, r.typ.Name())
 }
 
 func (r *resource) Identifier() string {
@@ -50,7 +51,7 @@ func (r *resource) Identifier() string {
 	return r.Activity.Identifier() + `?` + vs.Encode()
 }
 
-func (r *resource) Run(c eval.Context, input eval.OrderedMap) eval.OrderedMap {
+func (r *resource) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
 	return service.ApplyState(c, r, input)
 }
 

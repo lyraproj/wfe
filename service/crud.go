@@ -2,36 +2,36 @@ package service
 
 import (
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/annotation"
 	"github.com/lyraproj/servicesdk/wfapi"
 	"github.com/lyraproj/wfe/api"
 )
 
-func StartEra(c eval.Context) {
+func StartEra(c px.Context) {
 	getIdentity(c).bumpEra(c)
 }
 
 // SweepAndGC performs a sweep of the Identity store, retrieves all garbage, and
 // then tells the handler for each garbage entry to delete the resource. The entry
 // is then purged from the Identity store
-func SweepAndGC(c eval.Context, prefix string) {
+func SweepAndGC(c px.Context, prefix string) {
 	identity := getIdentity(c)
 	identity.sweep(c, prefix)
 	gl := identity.garbage(c)
 	ng := gl.Len()
-	rs := make([]eval.List, ng)
+	rs := make([]px.List, ng)
 
 	// Store in reverse order
 	ng--
-	gl.EachWithIndex(func(t eval.Value, i int) {
-		rs[ng-i] = t.(eval.List)
+	gl.EachWithIndex(func(t px.Value, i int) {
+		rs[ng-i] = t.(px.List)
 	})
 
 	for _, l := range rs {
 		hid := types.ParseURI(l.At(0).String()).Query().Get(`hid`)
-		handlerDef := GetHandler(c, eval.NewTypedName(eval.NsHandler, hid))
+		handlerDef := GetHandler(c, px.NewTypedName(px.NsHandler, hid))
 		handler := GetService(c, handlerDef.ServiceId())
 
 		extId := l.At(1)
@@ -40,12 +40,12 @@ func SweepAndGC(c eval.Context, prefix string) {
 	}
 }
 
-func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) eval.OrderedMap {
+func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.OrderedMap {
 	ac := ActivityContext(c)
 	op := GetOperation(ac)
 
 	handlerDef := GetHandler(c, resource.HandlerId())
-	crd := GetProperty(handlerDef, `interface`, types.NewTypeType(types.DefaultObjectType())).(eval.ObjectType)
+	crd := GetProperty(handlerDef, `interface`, types.NewTypeType(types.DefaultObjectType())).(px.ObjectType)
 	identity := getIdentity(c)
 	handler := GetService(c, handlerDef.ServiceId())
 
@@ -57,28 +57,28 @@ func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) ev
 		extId = identity.getExternal(c, intId, op == wfapi.Read || op == wfapi.Delete)
 	}
 
-	var result eval.PuppetObject
+	var result px.PuppetObject
 	hn := handlerDef.Identifier().Name()
 	switch op {
 	case wfapi.Read:
 		if extId == nil {
-			return eval.EMPTY_MAP
+			return px.EmptyMap
 		}
-		result = eval.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(eval.PuppetObject)
+		result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
 	case wfapi.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
-			result = handler.Invoke(c, hn, `read`, extId).(eval.PuppetObject)
+			result = handler.Invoke(c, hn, `read`, extId).(px.PuppetObject)
 			break
 		}
 
 		desiredState := GetService(c, resource.ServiceId()).State(c, resource.Name(), input)
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
-			rt := handler.Invoke(c, hn, `create`, desiredState).(eval.List)
-			result = eval.AssertInstance(handlerDef.Label, resource.Type(), rt.At(0)).(eval.PuppetObject)
+			rt := handler.Invoke(c, hn, `create`, desiredState).(px.List)
+			result = px.AssertInstance(handlerDef.Label, resource.Type(), rt.At(0)).(px.PuppetObject)
 			extId = rt.At(1)
 			identity.associate(c, intId, extId)
 			break
@@ -87,7 +87,7 @@ func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) ev
 		// Read current state and check if an update is needed
 		updateNeeded := false
 		recreateNeeded := false
-		currentState := eval.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(eval.PuppetObject)
+		currentState := px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
 			ra := a.(annotation.Resource)
@@ -102,7 +102,7 @@ func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) ev
 				// Update existing content. If an update method exists, call it. If not, then fall back
 				// to delete + create
 				if _, ok := crd.Member(`update`); ok {
-					result = eval.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `update`, extId, desiredState)).(eval.PuppetObject)
+					result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `update`, extId, desiredState)).(px.PuppetObject)
 					break
 				}
 			}
@@ -111,15 +111,15 @@ func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) ev
 			identity.removeExternal(c, extId)
 
 			rt := handler.Invoke(c, hn, `create`, desiredState)
-			rl := rt.(eval.List)
-			result = eval.AssertInstance(handlerDef.Label, resource.Type(), rl.At(0)).(eval.PuppetObject)
+			rl := rt.(px.List)
+			result = px.AssertInstance(handlerDef.Label, resource.Type(), rl.At(0)).(px.PuppetObject)
 			extId = rl.At(1)
 			identity.associate(c, intId, extId)
 		} else {
 			result = currentState
 		}
 	default:
-		panic(eval.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))
+		panic(px.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))
 	}
 
 	switch op {
@@ -131,34 +131,34 @@ func ApplyState(c eval.Context, resource api.Resource, input eval.OrderedMap) ev
 		}
 		return types.WrapHash(entries)
 	}
-	return eval.EMPTY_MAP
+	return px.EmptyMap
 }
 
-func getValue(p eval.Parameter, r api.Resource, o eval.PuppetObject) *types.HashEntry {
+func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntry {
 	n := p.Name()
 	a := n
 	if p.HasValue() {
 		v := p.Value()
-		if a, ok := v.(*types.ArrayValue); ok {
+		if a, ok := v.(*types.Array); ok {
 			// Build hash from multiple attributes
 			entries := make([]*types.HashEntry, a.Len())
-			a.EachWithIndex(func(e eval.Value, i int) {
+			a.EachWithIndex(func(e px.Value, i int) {
 				a := e.String()
 				if v, ok := o.Get(a); ok {
 					entries[i] = types.WrapHashEntry(e, v)
 				} else {
-					panic(eval.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
+					panic(px.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
 				}
 			})
 			return types.WrapHashEntry2(n, types.WrapHash(entries))
 		}
 
-		if s, ok := v.(eval.StringValue); ok {
+		if s, ok := v.(px.StringValue); ok {
 			a = s.String()
 		}
 	}
 	if v, ok := o.Get(a); ok {
 		return types.WrapHashEntry2(n, v)
 	}
-	panic(eval.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
+	panic(px.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
 }

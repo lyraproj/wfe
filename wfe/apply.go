@@ -1,10 +1,10 @@
 package wfe
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/pcore/px"
 )
 
-func Apply(c eval.Context, id string, state eval.PuppetObject) eval.PuppetObject {
+func Apply(c px.Context, id string, state px.PuppetObject) px.PuppetObject {
 	// TODO:
 	return state
 }

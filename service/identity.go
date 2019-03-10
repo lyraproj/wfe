@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/wfe/api"
 )
@@ -13,77 +13,77 @@ type identity struct {
 	invokable serviceapi.Invokable
 }
 
-func (i *identity) associate(c eval.Context, internalID, externalID eval.Value) {
+func (i *identity) associate(c px.Context, internalID, externalID px.Value) {
 	i.invokable.Invoke(c, i.id, `associate`, internalID, externalID)
 }
 
-func (i *identity) bumpEra(c eval.Context) {
+func (i *identity) bumpEra(c px.Context) {
 	i.invokable.Invoke(c, i.id, `bumpEra`)
 }
 
-func (i *identity) garbage(c eval.Context) eval.List {
+func (i *identity) garbage(c px.Context) px.List {
 	result := i.invokable.Invoke(c, i.id, `garbage`)
-	if l, ok := result.(eval.List); ok {
+	if l, ok := result.(px.List); ok {
 		return l
 	}
 	return nil
 }
 
-func (i *identity) search(c eval.Context, prefix string) eval.List {
+func (i *identity) search(c px.Context, prefix string) px.List {
 	result := i.invokable.Invoke(c, i.id, `search`, types.WrapString(prefix))
-	if l, ok := result.(eval.List); ok {
+	if l, ok := result.(px.List); ok {
 		return l
 	}
 	return nil
 }
 
-func (i *identity) sweep(c eval.Context, prefix string) {
+func (i *identity) sweep(c px.Context, prefix string) {
 	i.invokable.Invoke(c, i.id, `sweep`, types.WrapString(prefix))
 }
 
-func (i *identity) exists(c eval.Context, internalId eval.Value) bool {
-	result := i.invokable.Invoke(c, i.id, `getExternal`, internalId).(eval.List)
-	return result.At(1).(eval.BooleanValue).Bool()
+func (i *identity) exists(c px.Context, internalId px.Value) bool {
+	result := i.invokable.Invoke(c, i.id, `getExternal`, internalId).(px.List)
+	return result.At(1).(px.Boolean).Bool()
 }
 
-func (i *identity) getExternal(c eval.Context, internalId eval.Value, required bool) eval.Value {
+func (i *identity) getExternal(c px.Context, internalId px.Value, required bool) px.Value {
 	result := i.invokable.Invoke(c, i.id, `getExternal`, internalId)
-	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
+	if id, ok := result.(px.StringValue); ok && id.String() != `` {
 		return id
 	}
 	if required {
-		panic(eval.Error(api.WF_UNABLE_TO_DETERMINE_EXTERNAL_ID, issue.H{`id`: internalId}))
+		panic(px.Error(api.WF_UNABLE_TO_DETERMINE_EXTERNAL_ID, issue.H{`id`: internalId}))
 	}
 	return nil
 }
 
-func (i *identity) getInternal(c eval.Context, externalID eval.Value) (eval.Value, bool) {
+func (i *identity) getInternal(c px.Context, externalID px.Value) (px.Value, bool) {
 	result := i.invokable.Invoke(c, i.id, `getInternal`, externalID)
-	if id, ok := result.(eval.StringValue); ok && id.String() != `` {
+	if id, ok := result.(px.StringValue); ok && id.String() != `` {
 		return id, ok
 	}
 	return nil, false
 }
 
-func (i *identity) purgeExternal(c eval.Context, externalID eval.Value) {
+func (i *identity) purgeExternal(c px.Context, externalID px.Value) {
 	i.invokable.Invoke(c, i.id, `purgeExternal`, externalID)
 }
 
-func (i *identity) purgeInternal(c eval.Context, internalID eval.Value) {
+func (i *identity) purgeInternal(c px.Context, internalID px.Value) {
 	i.invokable.Invoke(c, i.id, `purgeInternal`, internalID)
 }
 
-func (i *identity) removeExternal(c eval.Context, externalID eval.Value) {
+func (i *identity) removeExternal(c px.Context, externalID px.Value) {
 	i.invokable.Invoke(c, i.id, `removeExternal`, externalID)
 }
 
-func (i *identity) removeInternal(c eval.Context, internalID eval.Value) {
+func (i *identity) removeInternal(c px.Context, internalID px.Value) {
 	i.invokable.Invoke(c, i.id, `removeInternal`, internalID)
 }
 
-var IdentityId = eval.NewTypedName(eval.NsDefinition, serviceapi.IdentityName)
+var IdentityId = px.NewTypedName(px.NsDefinition, serviceapi.IdentityName)
 
-func getIdentity(c eval.Context) *identity {
+func getIdentity(c px.Context) *identity {
 	idef := GetDefinition(c, IdentityId)
 	return &identity{idef.Identifier().Name(), GetService(c, idef.ServiceId())}
 }

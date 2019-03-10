@@ -1,20 +1,21 @@
 package wfe
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
 	"sync"
+
+	"github.com/lyraproj/pcore/px"
 )
 
 type serviceLoader struct {
-	eval.ParentedLoader
+	px.ParentedLoader
 	lock      sync.Mutex
-	services  map[string]eval.LoaderEntry
+	services  map[string]px.LoaderEntry
 	loadLocks map[string]sync.Mutex
 }
 
 // LoadEntry returns the requested entry or nil if no such entry can be found
-func (l *serviceLoader) LoadEntry(c eval.Context, name eval.TypedName) eval.LoaderEntry {
-	if name.Namespace() != eval.NsService {
+func (l *serviceLoader) LoadEntry(c px.Context, name px.TypedName) px.LoaderEntry {
+	if name.Namespace() != px.NsService {
 		return l.ParentedLoader.Parent().LoadEntry(c, name)
 	}
 
@@ -58,14 +59,14 @@ func (l *serviceLoader) LoadEntry(c eval.Context, name eval.TypedName) eval.Load
 	return s
 }
 
-func (l *serviceLoader) NameAuthority() eval.URI {
+func (l *serviceLoader) NameAuthority() px.URI {
 	return l.ParentedLoader.Parent().NameAuthority()
 }
 
-func (l *serviceLoader) Parent() eval.Loader {
+func (l *serviceLoader) Parent() px.Loader {
 	return l.ParentedLoader.Parent()
 }
 
-func ServiceLoader(parent eval.Loader) *serviceLoader {
-	return &serviceLoader{ParentedLoader: eval.NewParentedLoader(parent).(eval.ParentedLoader), services: make(map[string]eval.LoaderEntry), loadLocks: make(map[string]sync.Mutex)}
+func ServiceLoader(parent px.Loader) *serviceLoader {
+	return &serviceLoader{ParentedLoader: px.NewParentedLoader(parent).(px.ParentedLoader), services: make(map[string]px.LoaderEntry), loadLocks: make(map[string]sync.Mutex)}
 }

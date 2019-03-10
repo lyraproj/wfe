@@ -1,13 +1,13 @@
 package api
 
-import "github.com/lyraproj/puppet-evaluator/eval"
+import "github.com/lyraproj/pcore/px"
 
 type Resource interface {
 	Activity
 
-	Type() eval.ObjectType
+	Type() px.ObjectType
 
-	HandlerId() eval.TypedName
+	HandlerId() px.TypedName
 
-	ExtId() eval.Value
+	ExtId() px.Value
 }

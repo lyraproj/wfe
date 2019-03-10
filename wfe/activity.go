@@ -3,26 +3,27 @@ package wfe
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
+	"net/url"
+	"strings"
+
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/condition"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wfapi"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
-	"net/url"
-	"strings"
 )
 
 type Activity struct {
-	serviceId eval.TypedName
+	serviceId px.TypedName
 	style     string
 	name      string
 	when      wfapi.Condition
-	input     []eval.Parameter
-	output    []eval.Parameter
+	input     []px.Parameter
+	output    []px.Parameter
 }
 
 func CreateActivity(def serviceapi.Definition) api.Activity {
@@ -43,11 +44,11 @@ func CreateActivity(def serviceapi.Definition) api.Activity {
 	return nil
 }
 
-func (a *Activity) GetService(c eval.Context) serviceapi.Service {
+func (a *Activity) GetService(c px.Context) serviceapi.Service {
 	return service.GetService(c, a.serviceId)
 }
 
-func (a *Activity) ServiceId() eval.TypedName {
+func (a *Activity) ServiceId() px.TypedName {
 	return a.serviceId
 }
 
@@ -67,11 +68,11 @@ func (a *Activity) Name() string {
 	return a.name
 }
 
-func (a *Activity) Input() []eval.Parameter {
+func (a *Activity) Input() []px.Parameter {
 	return a.input
 }
 
-func (a *Activity) Output() []eval.Parameter {
+func (a *Activity) Output() []px.Parameter {
 	return a.output
 }
 
@@ -88,14 +89,14 @@ func (a *Activity) Init(def serviceapi.Definition) {
 	}
 }
 
-func getParameters(key string, props eval.OrderedMap) []eval.Parameter {
+func getParameters(key string, props px.OrderedMap) []px.Parameter {
 	if input, ok := props.Get4(key); ok {
-		ia := input.(eval.List)
-		is := make([]eval.Parameter, ia.Len())
-		ia.EachWithIndex(func(iv eval.Value, idx int) { is[idx] = iv.(eval.Parameter) })
+		ia := input.(px.List)
+		is := make([]px.Parameter, ia.Len())
+		ia.EachWithIndex(func(iv px.Value, idx int) { is[idx] = iv.(px.Parameter) })
 		return is
 	}
-	return []eval.Parameter{}
+	return []px.Parameter{}
 }
 
 func (a *Activity) Identifier() string {
@@ -107,12 +108,12 @@ func (a *Activity) Identifier() string {
 	return b.String()
 }
 
-func ResolveInput(ctx eval.Context, a api.Activity, input eval.OrderedMap, p eval.Parameter) eval.Value {
+func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Parameter) px.Value {
 	if !p.HasValue() {
 		if v, ok := input.Get4(p.Name()); ok {
 			return v
 		}
-		panic(eval.Error(WF_PARAMETER_UNRESOLVED, issue.H{`activity`: a, `parameter`: p.Name()}))
+		panic(px.Error(WF_PARAMETER_UNRESOLVED, issue.H{`activity`: a, `parameter`: p.Name()}))
 	}
 	return types.ResolveDeferred(ctx, p.Value())
 }

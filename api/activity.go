@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/servicesdk/wfapi"
 )
 
@@ -21,7 +21,7 @@ type Activity interface {
 	Identifier() string
 
 	// The Id of the service that provices this activity
-	ServiceId() eval.TypedName
+	ServiceId() px.TypedName
 
 	// Style returns the activity style, 'workflow', 'resource', 'stateHandler', or 'action'.
 	Style() string
@@ -30,12 +30,12 @@ type Activity interface {
 	Name() string
 
 	// Input returns the input requirements for the Activity
-	Input() []eval.Parameter
+	Input() []px.Parameter
 
 	// Output returns the definition of that this Activity will produce
-	Output() []eval.Parameter
+	Output() []px.Parameter
 
 	// Run will execute this Activity. The given input must match the declared Input. It will return
 	// a value that corresponds to the Output declaration.
-	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
+	Run(ctx px.Context, input px.OrderedMap) px.OrderedMap
 }
