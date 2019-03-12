@@ -11,7 +11,7 @@ import (
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
-	"github.com/lyraproj/servicesdk/condition"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 	"gonum.org/v1/gonum/graph"
@@ -104,7 +104,7 @@ func (s *workflowEngine) addActivity(na api.Activity) {
 		for ni.Next() {
 			a := ni.Node().(api.Activity)
 			if a.Name() == na.Name() {
-				panic(issue.NewReported(WF_ALREADY_DEFINED, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
+				panic(issue.NewReported(AlreadyDefined, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
 			}
 		}
 	}
@@ -119,7 +119,7 @@ const maxGuards = 8
 func (s *workflowEngine) GraphAsDot() []byte {
 	de, err := dot.Marshal(s.graph, s.Name(), ``, `  `)
 	if err != nil {
-		panic(px.Error(WF_GRAPH_DOT_MARSHAL, issue.H{`detail`: err.Error()}))
+		panic(px.Error(GraphDotMarshal, issue.H{`detail`: err.Error()}))
 	}
 	return de
 }
@@ -142,7 +142,7 @@ func (s *workflowEngine) BuildInvertedGraph(c px.Context, existsFunc func(string
 	vp.add(s, s.Input())
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
+		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
@@ -150,7 +150,7 @@ func (s *workflowEngine) BuildInvertedGraph(c px.Context, existsFunc func(string
 	ni.Reset()
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
+		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))
@@ -178,7 +178,7 @@ func (s *workflowEngine) Validate() {
 	if gc > 0 {
 		maxVariations := int(math.Pow(2.0, float64(gc)))
 		if gc > maxGuards {
-			panic(px.Error(WF_TOO_MANY_GUARDS, issue.H{`activity`: s, `max`: maxGuards, `count`: gc}))
+			panic(px.Error(TooManyGuards, issue.H{`activity`: s, `max`: maxGuards, `count`: gc}))
 		}
 
 		guardNames := make([]string, 0, gc)
@@ -270,21 +270,21 @@ func (vp valueProducers) add(a api.Activity, ps []px.Parameter) {
 func (vp valueProducers) validate(a api.Activity) {
 	for k, v := range vp {
 		if len(v) > 1 {
-			panic(px.Error(WF_MULTIPLE_PRODUCERS_OF_VALUE, issue.H{`activity1`: v[0], `activity2`: v[1], `value`: k}))
+			panic(px.Error(MultipleProducersOfValue, issue.H{`activity1`: v[0], `activity2`: v[1], `value`: k}))
 		}
 	}
 	for _, param := range a.Output() {
 		if _, found := vp[param.Name()]; found {
 			continue
 		}
-		panic(px.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: param.Name()}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: param.Name()}))
 	}
 }
 
 func (vp valueProducers) validateInput(a api.Activity) {
 	var checkDep = func(name string) {
 		if _, found := vp[name]; !found {
-			panic(px.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
+			panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
 		}
 	}
 	for _, name := range a.When().Names() {
@@ -345,7 +345,7 @@ func (s *workflowEngine) DumpVariables() {
 
 func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Activity {
 
-	dam := make(map[string]api.Activity, 0)
+	dam := make(map[string]api.Activity)
 	var addDeps = func(name string) {
 		if ds, found := vp[name]; found {
 			for _, d := range ds {
@@ -355,7 +355,7 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 			}
 			return
 		}
-		panic(px.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
 	}
 
 nextName:
@@ -442,7 +442,7 @@ func (s *workflowEngine) resolveParameter(ctx px.Context, activity api.Activity,
 		if ok {
 			return v
 		}
-		panic(px.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: activity, `value`: n}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: activity, `value`: n}))
 	}
 	return types.ResolveDeferred(ctx, param.Value(), ctx.Scope())
 }

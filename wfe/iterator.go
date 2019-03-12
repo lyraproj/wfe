@@ -8,7 +8,7 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 )
@@ -25,20 +25,20 @@ type iterator struct {
 func Iterator(def serviceapi.Definition) api.Activity {
 	over := getParameters(`over`, def.Properties())
 	variables := getParameters(`variables`, def.Properties())
-	style := wfapi.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
+	style := wf.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
 	activity := CreateActivity(service.GetProperty(def, `producer`, serviceapi.DefinitionMetaType).(serviceapi.Definition))
-	resultName := wfapi.LeafName(def.Identifier().Name())
+	resultName := wf.LeafName(def.Identifier().Name())
 	switch style {
-	case wfapi.IterationStyleRange:
+	case wf.IterationStyleRange:
 		return NewRange(activity, resultName, over, variables)
-	case wfapi.IterationStyleTimes:
+	case wf.IterationStyleTimes:
 		return NewTimes(activity, resultName, over, variables)
 	default:
-		panic(px.Error(api.WF_ILLEGAL_ITERATION_STYLE, issue.H{`style`: style.String()}))
+		panic(px.Error(wf.IllegalIterationStyle, issue.H{`style`: style.String()}))
 	}
 }
 
-func (it *iterator) IterationStyle() wfapi.IterationStyle {
+func (it *iterator) IterationStyle() wf.IterationStyle {
 	panic("implement me")
 }
 
@@ -152,7 +152,7 @@ nextInput:
 func assertOverCount(it api.Iterator, expectedCount int) {
 	actualCount := len(it.Over())
 	if actualCount != expectedCount {
-		panic(px.Error(WF_ITERATION_PARAMETER_INVALID_COUNT,
+		panic(px.Error(IterationParameterInvalidCount,
 			issue.H{`iterator`: it, `expected`: expectedCount, `actual`: actualCount}))
 	}
 }
@@ -160,7 +160,7 @@ func assertOverCount(it api.Iterator, expectedCount int) {
 func assertVariableCount(it api.Iterator, expectedCount int) {
 	actualCount := len(it.Variables())
 	if actualCount != expectedCount {
-		panic(px.Error(WF_ITERATION_VARIABLE_INVALID_COUNT,
+		panic(px.Error(IterationVariableInvalidCount,
 			issue.H{`iterator`: it, `expected`: expectedCount, `actual`: actualCount}))
 	}
 }
@@ -174,7 +174,7 @@ func Validate(it api.Iterator, expectedOver, expectedVars int) {
 	// Ensure that output consists of a key and a value parameter
 	o := a.Output()
 	if len(o) != 2 || !(o[0].Name() == `key` && o[1].Name() == `value` || o[1].Name() == `key` && o[0].Name() == `value`) {
-		panic(px.Error(WF_ITERATION_ACTIVITY_WRONG_OUTPUT, issue.H{`iterator`: it}))
+		panic(px.Error(IterationActivityWrongOutput, issue.H{`iterator`: it}))
 	}
 
 	// Ensure that input contains output produced by the iterator
@@ -187,14 +187,14 @@ nextVar:
 				continue nextVar
 			}
 		}
-		panic(px.Error(WF_ITERATION_ACTIVITY_WRONG_INPUT, issue.H{`iterator`: it}))
+		panic(px.Error(IterationActivityWrongInput, issue.H{`iterator`: it}))
 	}
 }
 
 func assertInt(t api.Iterator, arg px.Value, paramIdx int) int64 {
 	iv, ok := arg.(px.Integer)
 	if !ok {
-		panic(px.Error(WF_ITERATION_PARAMETER_WRONG_TYPE, issue.H{
+		panic(px.Error(IterationParameterWrongType, issue.H{
 			`iterator`: t, `parameter`: t.Over()[paramIdx].Name(), `expected`: `Integer`, `actual`: arg.PType()}))
 	}
 	return iv.Int()
@@ -218,8 +218,8 @@ func (t *times) Label() string {
 	return iterLabel(t)
 }
 
-func (t *times) IterationStyle() wfapi.IterationStyle {
-	return wfapi.IterationStyleTimes
+func (t *times) IterationStyle() wf.IterationStyle {
+	return wf.IterationStyleTimes
 }
 
 func (t *times) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
@@ -241,8 +241,8 @@ func (t *itRange) Label() string {
 	return iterLabel(t)
 }
 
-func (t *itRange) IterationStyle() wfapi.IterationStyle {
-	return wfapi.IterationStyleRange
+func (t *itRange) IterationStyle() wf.IterationStyle {
+	return wf.IterationStyleRange
 }
 
 func (t *itRange) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {

@@ -5,7 +5,7 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/annotation"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 )
 
@@ -54,19 +54,19 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 	explicitExtId := extId != nil
 	if !explicitExtId {
 		// external id must exist in order to do a read or delete
-		extId = identity.getExternal(c, intId, op == wfapi.Read || op == wfapi.Delete)
+		extId = identity.getExternal(c, intId, op == wf.Read || op == wf.Delete)
 	}
 
 	var result px.PuppetObject
 	hn := handlerDef.Identifier().Name()
 	switch op {
-	case wfapi.Read:
+	case wf.Read:
 		if extId == nil {
 			return px.EmptyMap
 		}
 		result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
-	case wfapi.Upsert:
+	case wf.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
@@ -85,8 +85,7 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 		}
 
 		// Read current state and check if an update is needed
-		updateNeeded := false
-		recreateNeeded := false
+		var updateNeeded, recreateNeeded bool
 		currentState := px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
@@ -119,11 +118,11 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 			result = currentState
 		}
 	default:
-		panic(px.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))
+		panic(px.Error(wf.IllegalOperation, issue.H{`operation`: op}))
 	}
 
 	switch op {
-	case wfapi.Read, wfapi.Upsert:
+	case wf.Read, wf.Upsert:
 		output := resource.Output()
 		entries := make([]*types.HashEntry, len(output))
 		for i, o := range output {
@@ -147,7 +146,7 @@ func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntr
 				if v, ok := o.Get(a); ok {
 					entries[i] = types.WrapHashEntry(e, v)
 				} else {
-					panic(px.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
+					panic(px.Error(api.NoSuchAttribute, issue.H{`activity`: r, `name`: a}))
 				}
 			})
 			return types.WrapHashEntry2(n, types.WrapHash(entries))
@@ -160,5 +159,5 @@ func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntr
 	if v, ok := o.Get(a); ok {
 		return types.WrapHashEntry2(n, v)
 	}
-	panic(px.Error(api.WF_NO_SUCH_ATTRIBUTE, issue.H{`activity`: r, `name`: a}))
+	panic(px.Error(api.NoSuchAttribute, issue.H{`activity`: r, `name`: a}))
 }

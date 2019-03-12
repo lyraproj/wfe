@@ -3,7 +3,6 @@ package wfe
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/pcore/px"
-	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/wfe/api"
 )
@@ -13,9 +12,11 @@ type action struct {
 	api px.ObjectType
 }
 
+/* TODO: Add type check using expectedType
 var ioType = types.NewHashType(types.DefaultStringType(), types.DefaultRichDataType(), nil)
 var expectedType = types.NewCallableType(
 	types.NewTupleType([]px.Type{ioType}, nil), ioType, nil)
+*/
 
 func Action(def serviceapi.Definition) api.Activity {
 	a := &action{}
@@ -25,8 +26,8 @@ func Action(def serviceapi.Definition) api.Activity {
 
 func (s *action) Init(d serviceapi.Definition) {
 	s.Activity.Init(d)
-	if api, ok := d.Properties().Get4(`interface`); ok {
-		s.api = api.(px.ObjectType)
+	if i, ok := d.Properties().Get4(`interface`); ok {
+		s.api = i.(px.ObjectType)
 	}
 }
 

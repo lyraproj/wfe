@@ -6,22 +6,20 @@ import (
 	"net/url"
 	"strings"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
-	"github.com/lyraproj/servicesdk/condition"
 	"github.com/lyraproj/servicesdk/serviceapi"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 )
 
 type Activity struct {
 	serviceId px.TypedName
-	style     string
 	name      string
-	when      wfapi.Condition
+	when      wf.Condition
 	input     []px.Parameter
 	output    []px.Parameter
 }
@@ -60,7 +58,7 @@ func ActivityLabel(a api.Activity) string {
 	return fmt.Sprintf(`%s '%s'`, a.Style(), a.Name())
 }
 
-func (a *Activity) When() wfapi.Condition {
+func (a *Activity) When() wf.Condition {
 	return a.when
 }
 
@@ -83,9 +81,9 @@ func (a *Activity) Init(def serviceapi.Definition) {
 	a.input = getParameters(`input`, props)
 	a.output = getParameters(`output`, props)
 	if wh, ok := props.Get4(`when`); ok {
-		a.when = wh.(wfapi.Condition)
+		a.when = wh.(wf.Condition)
 	} else {
-		a.when = condition.Always
+		a.when = wf.Always
 	}
 }
 
@@ -113,7 +111,7 @@ func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Para
 		if v, ok := input.Get4(p.Name()); ok {
 			return v
 		}
-		panic(px.Error(WF_PARAMETER_UNRESOLVED, issue.H{`activity`: a, `parameter`: p.Name()}))
+		panic(px.Error(ParameterUnresolved, issue.H{`activity`: a, `parameter`: p.Name()}))
 	}
 	return types.ResolveDeferred(ctx, p.Value(), input)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 )
 
@@ -18,14 +18,14 @@ func ActivityContext(c px.Context) px.OrderedMap {
 	if ac, ok := c.Get(ActivityContextKey); ok {
 		return px.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
 	}
-	panic(px.Error(api.WF_NO_ACTIVITY_CONTEXT, issue.NO_ARGS))
+	panic(px.Error(api.NoActivityContext, issue.NO_ARGS))
 }
 
-func GetOperation(ac px.OrderedMap) wfapi.Operation {
+func GetOperation(ac px.OrderedMap) wf.Operation {
 	if op, ok := ac.Get4(`operation`); ok {
-		return wfapi.Operation(op.(px.Integer).Int())
+		return wf.Operation(op.(px.Integer).Int())
 	}
-	return wfapi.Read
+	return wf.Read
 }
 
 func GetService(c px.Context, serviceId px.TypedName) serviceapi.Service {
@@ -34,7 +34,7 @@ func GetService(c px.Context, serviceId px.TypedName) serviceapi.Service {
 			return sm.(serviceapi.Service)
 		}
 	}
-	panic(px.Error(api.WF_UNABLE_TO_LOAD_REQUIRED, issue.H{`namespace`: string(px.NsService), `name`: serviceId.String()}))
+	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsService), `name`: serviceId.String()}))
 }
 
 func GetDefinition(c px.Context, definitionId px.TypedName) serviceapi.Definition {
@@ -43,7 +43,7 @@ func GetDefinition(c px.Context, definitionId px.TypedName) serviceapi.Definitio
 			return sm.(serviceapi.Definition)
 		}
 	}
-	panic(px.Error(api.WF_UNABLE_TO_LOAD_REQUIRED, issue.H{`namespace`: string(px.NsDefinition), `name`: definitionId.String()}))
+	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsDefinition), `name`: definitionId.String()}))
 }
 
 func GetHandler(c px.Context, handlerId px.TypedName) serviceapi.Definition {
@@ -52,7 +52,7 @@ func GetHandler(c px.Context, handlerId px.TypedName) serviceapi.Definition {
 			return sm.(serviceapi.Definition)
 		}
 	}
-	panic(px.Error(api.WF_UNABLE_TO_LOAD_REQUIRED, issue.H{`namespace`: string(px.NsHandler), `name`: handlerId.String()}))
+	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsHandler), `name`: handlerId.String()}))
 }
 
 func GetStringProperty(def serviceapi.Definition, key string) string {
@@ -65,7 +65,7 @@ func GetProperty(def serviceapi.Definition, key string, typ px.Type) px.Value {
 			return fmt.Sprintf(`%s %s, property %s`, def.ServiceId(), def.Identifier(), key)
 		}, typ, prop)
 	}
-	panic(px.Error(api.WF_MISSING_REQUIRED_PROPERTY, issue.H{`service`: def.ServiceId(), `definition`: def.Identifier(), `key`: key}))
+	panic(px.Error(api.MissingRequiredProperty, issue.H{`service`: def.ServiceId(), `definition`: def.Identifier(), `key`: key}))
 }
 
 func GetOptionalProperty(def serviceapi.Definition, key string, typ px.Type) (px.Value, bool) {

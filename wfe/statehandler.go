@@ -5,7 +5,7 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 )
@@ -33,17 +33,17 @@ func (a *stateHandler) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
 	invokable := a.GetService(c)
 
 	switch op {
-	case wfapi.Read:
+	case wf.Read:
 		return invokable.Invoke(c, a.name, `read`, input).(px.OrderedMap)
 
-	case wfapi.Upsert:
+	case wf.Upsert:
 		return invokable.Invoke(c, a.name, `upsert`, input).(px.OrderedMap)
 
-	case wfapi.Delete:
+	case wf.Delete:
 		invokable.Invoke(c, a.name, `delete`, input)
 		return px.EmptyMap
 	default:
-		panic(px.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))
+		panic(px.Error(wf.IllegalOperation, issue.H{`operation`: op}))
 	}
 }
 
