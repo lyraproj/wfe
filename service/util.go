@@ -15,8 +15,8 @@ import (
 const ActivityContextKey = `activity::context`
 
 func ActivityContext(c px.Context) px.OrderedMap {
-	if ac, ok := c.Scope().Get(ActivityContextKey); ok {
-		return px.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac).(px.OrderedMap)
+	if ac, ok := c.Get(ActivityContextKey); ok {
+		return px.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
 	}
 	panic(px.Error(api.WF_NO_ACTIVITY_CONTEXT, issue.NO_ARGS))
 }

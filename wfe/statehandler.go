@@ -41,7 +41,7 @@ func (a *stateHandler) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
 
 	case wfapi.Delete:
 		invokable.Invoke(c, a.name, `delete`, input)
-		return px.EMPTY_MAP
+		return px.EmptyMap
 	default:
 		panic(px.Error(wfapi.WF_ILLEGAL_OPERATION, issue.H{`operation`: op}))
 	}

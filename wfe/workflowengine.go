@@ -444,7 +444,7 @@ func (s *workflowEngine) resolveParameter(ctx px.Context, activity api.Activity,
 		}
 		panic(px.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: activity, `value`: n}))
 	}
-	return types.ResolveDeferred(ctx, param.Value())
+	return types.ResolveDeferred(ctx, param.Value(), ctx.Scope())
 }
 
 // Ensure that all nodes that has an edge to this node have been

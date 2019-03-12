@@ -129,7 +129,7 @@ func resolveInput(c px.Context, it api.Iterator, input px.OrderedMap) ([]px.Valu
 	for i, o := range it.Over() {
 		arg := input.Get5(o.Name(), px.Undef)
 		if df, ok := arg.(types.Deferred); ok {
-			arg = df.Resolve(c)
+			arg = df.Resolve(c, c.Scope())
 		}
 		over[i] = arg
 	}

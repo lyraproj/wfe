@@ -115,5 +115,5 @@ func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Para
 		}
 		panic(px.Error(WF_PARAMETER_UNRESOLVED, issue.H{`activity`: a, `parameter`: p.Name()}))
 	}
-	return types.ResolveDeferred(ctx, p.Value())
+	return types.ResolveDeferred(ctx, p.Value(), input)
 }
