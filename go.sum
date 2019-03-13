@@ -21,6 +21,8 @@ github.com/lyraproj/pcore v0.0.0-20190312090417-c3ed62d0aa05 h1:JNIo0lVg4D0H9A4F
 github.com/lyraproj/pcore v0.0.0-20190312090417-c3ed62d0aa05/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
 github.com/lyraproj/pcore v0.0.0-20190312155502-c99dcf0e4746 h1:be9oDrVUUbh7G3wxTRK9m+F5aA6OX1ZZ5hLOReOSViM=
 github.com/lyraproj/pcore v0.0.0-20190312155502-c99dcf0e4746/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
+github.com/lyraproj/pcore v0.0.0-20190312215929-fcacd5c4e31e h1:65AkH+QhSFMOO4KiFdsRQmMEev5+x7dyFvzsQRysXCA=
+github.com/lyraproj/pcore v0.0.0-20190312215929-fcacd5c4e31e/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190221131608-f58f6fb22150 h1:jYUvV7OgvPhhx7OiposQ/sXswFByP3l6rLSeBOre6kM=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190221131608-f58f6fb22150/go.mod h1:/w2Dkqs8BNYj5xYQMOTg23yTJD4IUfMrdpgVBCR8xMw=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190304221938-dfca410f5e9b h1:gjaLcdm2kLS2rxxj5QGiVJwpJUjtL6XAk4eEYW5kBZQ=
@@ -36,6 +38,8 @@ github.com/lyraproj/servicesdk v0.0.0-20190312143154-5efe578b614f h1:xDiS+JJt1Wn
 github.com/lyraproj/servicesdk v0.0.0-20190312143154-5efe578b614f/go.mod h1:JtKLADWtiUFhSm4V0sSKFSfDgussD0HYo25qcCJOCh0=
 github.com/lyraproj/servicesdk v0.0.0-20190312170439-822d7707d412 h1:BeBROKROX92Utd3mCnsyfhvw4p7Q56Gu9LXzCmclgy8=
 github.com/lyraproj/servicesdk v0.0.0-20190312170439-822d7707d412/go.mod h1:g62tdOLAgHYiKV1PjUs1C6llmAe0ga7+flA28cgB6Wg=
+github.com/lyraproj/servicesdk v0.0.0-20190312223546-a9540b746bb8 h1:0DMIdr6GAB3oOmUA3KAL8eSHaqLoVnsRrIC/jE78TU8=
+github.com/lyraproj/servicesdk v0.0.0-20190312223546-a9540b746bb8/go.mod h1:zjQ+GuWJa6lSzM9WHDM7vaD4ldt2r8kJEAM9tPSGSuA=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
