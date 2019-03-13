@@ -3,26 +3,27 @@ package wfe
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"sort"
+	"sync"
+	"sync/atomic"
+
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/servicesdk/condition"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
+	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 	"gonum.org/v1/gonum/graph/simple"
-	"math"
-	"sort"
-	"sync"
-	"sync/atomic"
 )
 
 type WorkflowEngine interface {
-	Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap
+	Run(ctx px.Context, input px.OrderedMap) px.OrderedMap
 
-	BuildInvertedGraph(ctx eval.Context, existsFunc func(string) bool)
+	BuildInvertedGraph(ctx px.Context, existsFunc func(string) bool)
 
 	GraphAsDot() []byte
 
@@ -37,7 +38,7 @@ type serverActivity struct {
 	resolved chan bool
 }
 
-func appendParameterNames(params []eval.Parameter, b *bytes.Buffer) {
+func appendParameterNames(params []px.Parameter, b *bytes.Buffer) {
 	for i, p := range params {
 		if i > 0 {
 			b.WriteByte(',')
@@ -75,7 +76,7 @@ type workflowEngine struct {
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
 	runLatch     map[int64]bool
-	values       map[string]eval.Value
+	values       map[string]px.Value
 	inbox        chan *serverActivity
 	jobCounter   int32
 	done         chan bool
@@ -103,7 +104,7 @@ func (s *workflowEngine) addActivity(na api.Activity) {
 		for ni.Next() {
 			a := ni.Node().(api.Activity)
 			if a.Name() == na.Name() {
-				panic(issue.NewReported(WF_ALREADY_DEFINED, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
+				panic(issue.NewReported(AlreadyDefined, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
 			}
 		}
 	}
@@ -118,12 +119,12 @@ const maxGuards = 8
 func (s *workflowEngine) GraphAsDot() []byte {
 	de, err := dot.Marshal(s.graph, s.Name(), ``, `  `)
 	if err != nil {
-		panic(eval.Error(WF_GRAPH_DOT_MARSHAL, issue.H{`detail`: err.Error()}))
+		panic(px.Error(GraphDotMarshal, issue.H{`detail`: err.Error()}))
 	}
 	return de
 }
 
-func (s *workflowEngine) BuildInvertedGraph(c eval.Context, existsFunc func(string) bool) {
+func (s *workflowEngine) BuildInvertedGraph(c px.Context, existsFunc func(string) bool) {
 	g := s.graph
 	ni := g.Nodes()
 	if ni == nil {
@@ -141,7 +142,7 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context, existsFunc func(stri
 	vp.add(s, s.Input())
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
+		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
 			vp.add(fa, fa.Output())
 		}
 	}
@@ -149,7 +150,7 @@ func (s *workflowEngine) BuildInvertedGraph(c eval.Context, existsFunc func(stri
 	ni.Reset()
 	for ni.Next() {
 		fa := ni.Node().(*serverActivity)
-		if fa.When() == condition.Always || existsFunc(fa.Identifier()) {
+		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				g.SetEdge(g.NewEdge(fa, dep.(graph.Node)))
@@ -177,7 +178,7 @@ func (s *workflowEngine) Validate() {
 	if gc > 0 {
 		maxVariations := int(math.Pow(2.0, float64(gc)))
 		if gc > maxGuards {
-			panic(eval.Error(WF_TOO_MANY_GUARDS, issue.H{`activity`: s, `max`: maxGuards, `count`: gc}))
+			panic(px.Error(TooManyGuards, issue.H{`activity`: s, `max`: maxGuards, `count`: gc}))
 		}
 
 		guardNames := make([]string, 0, gc)
@@ -254,7 +255,7 @@ func (s *workflowEngine) Validate() {
 
 type valueProducers map[string][]api.Activity
 
-func (vp valueProducers) add(a api.Activity, ps []eval.Parameter) {
+func (vp valueProducers) add(a api.Activity, ps []px.Parameter) {
 	for _, param := range ps {
 		n := param.Name()
 		v := vp[n]
@@ -269,21 +270,21 @@ func (vp valueProducers) add(a api.Activity, ps []eval.Parameter) {
 func (vp valueProducers) validate(a api.Activity) {
 	for k, v := range vp {
 		if len(v) > 1 {
-			panic(eval.Error(WF_MULTIPLE_PRODUCERS_OF_VALUE, issue.H{`activity1`: v[0], `activity2`: v[1], `value`: k}))
+			panic(px.Error(MultipleProducersOfValue, issue.H{`activity1`: v[0], `activity2`: v[1], `value`: k}))
 		}
 	}
 	for _, param := range a.Output() {
 		if _, found := vp[param.Name()]; found {
 			continue
 		}
-		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: param.Name()}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: param.Name()}))
 	}
 }
 
 func (vp valueProducers) validateInput(a api.Activity) {
 	var checkDep = func(name string) {
 		if _, found := vp[name]; !found {
-			panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
+			panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
 		}
 	}
 	for _, name := range a.When().Names() {
@@ -296,9 +297,9 @@ func (vp valueProducers) validateInput(a api.Activity) {
 	}
 }
 
-func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
-	s.values = make(map[string]eval.Value, 37)
-	input.EachPair(func(k, v eval.Value) {
+func (s *workflowEngine) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+	s.values = make(map[string]px.Value, 37)
+	input.EachPair(func(k, v px.Value) {
 		s.values[k.String()] = v
 	})
 
@@ -313,7 +314,7 @@ func (s *workflowEngine) Run(ctx eval.Context, input eval.OrderedMap) eval.Order
 	}
 
 	for w := 1; w <= 5; w++ {
-		eval.Fork(ctx, func(cf eval.Context) { s.activityWorker(cf, w) })
+		px.Fork(ctx, func(cf px.Context) { s.activityWorker(cf, w) })
 	}
 	for ni.Next() {
 		n := ni.Node()
@@ -344,7 +345,7 @@ func (s *workflowEngine) DumpVariables() {
 
 func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Activity {
 
-	dam := make(map[string]api.Activity, 0)
+	dam := make(map[string]api.Activity)
 	var addDeps = func(name string) {
 		if ds, found := vp[name]; found {
 			for _, d := range ds {
@@ -354,7 +355,7 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 			}
 			return
 		}
-		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: a, `value`: name}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
 	}
 
 nextName:
@@ -385,7 +386,7 @@ nextName:
 }
 
 // This function represents a worker that spawns activities
-func (s *workflowEngine) activityWorker(ctx eval.Context, id int) {
+func (s *workflowEngine) activityWorker(ctx px.Context, id int) {
 	for a := range s.inbox {
 		s.runActivity(ctx, a)
 		if atomic.AddInt32(&s.jobCounter, -1) <= 0 {
@@ -395,7 +396,7 @@ func (s *workflowEngine) activityWorker(ctx eval.Context, id int) {
 	}
 }
 
-func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
+func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
 	s.runLatchLock.Lock()
 	if s.runLatch[a.ID()] {
 		s.runLatchLock.Unlock()
@@ -413,10 +414,10 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	}
 	args := types.WrapHash(entries)
 
-	result := a.Run(ctx, args).(eval.OrderedMap)
+	result := a.Run(ctx, args).(px.OrderedMap)
 	if result != nil && result.Len() > 0 {
 		s.valuesLock.Lock()
-		result.EachPair(func(k, v eval.Value) {
+		result.EachPair(func(k, v px.Value) {
 			s.values[k.String()] = v
 		})
 		s.valuesLock.Unlock()
@@ -432,7 +433,7 @@ func (s *workflowEngine) runActivity(ctx eval.Context, a *serverActivity) {
 	}
 }
 
-func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activity, param eval.Parameter) eval.Value {
+func (s *workflowEngine) resolveParameter(ctx px.Context, activity api.Activity, param px.Parameter) px.Value {
 	n := param.Name()
 	if !param.HasValue() {
 		s.valuesLock.RLock()
@@ -441,9 +442,9 @@ func (s *workflowEngine) resolveParameter(ctx eval.Context, activity api.Activit
 		if ok {
 			return v
 		}
-		panic(eval.Error(WF_NO_PRODUCER_OF_VALUE, issue.H{`activity`: activity, `value`: n}))
+		panic(px.Error(NoProducerOfValue, issue.H{`activity`: activity, `value`: n}))
 	}
-	return types.ResolveDeferred(ctx, param.Value())
+	return types.ResolveDeferred(ctx, param.Value(), ctx.Scope())
 }
 
 // Ensure that all nodes that has an edge to this node have been

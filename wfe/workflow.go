@@ -1,8 +1,8 @@
 package wfe
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
@@ -14,9 +14,9 @@ type workflow struct {
 	activities []api.Activity
 }
 
-var DefinitionListType = types.NewArrayType(serviceapi.Definition_Type, nil)
+var DefinitionListType = types.NewArrayType(serviceapi.DefinitionMetaType, nil)
 
-func (w *workflow) Run(ctx eval.Context, input eval.OrderedMap) eval.OrderedMap {
+func (w *workflow) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
 	wf := NewWorkflowEngine(w)
 	wf.Validate()
 	return wf.Run(ctx, input)
@@ -42,8 +42,8 @@ func (w *workflow) Activities() []api.Activity {
 
 func (w *workflow) Init(def serviceapi.Definition) {
 	w.Activity.Init(def)
-	activities := service.GetProperty(def, `activities`, DefinitionListType).(eval.List)
+	activities := service.GetProperty(def, `activities`, DefinitionListType).(px.List)
 	as := make([]api.Activity, activities.Len())
-	activities.EachWithIndex(func(v eval.Value, i int) { as[i] = CreateActivity(v.(serviceapi.Definition)) })
+	activities.EachWithIndex(func(v px.Value, i int) { as[i] = CreateActivity(v.(serviceapi.Definition)) })
 	w.activities = as
 }
