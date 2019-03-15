@@ -106,7 +106,7 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 				}
 			}
 
-			handler.Invoke(c, hn, `delete`, extId)
+			// Rely on that deletion happens by means of GC at end of run
 			identity.removeExternal(c, extId)
 
 			rt := handler.Invoke(c, hn, `create`, desiredState)
