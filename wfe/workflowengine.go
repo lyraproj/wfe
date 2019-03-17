@@ -419,33 +419,22 @@ func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
 			default:
 				err = fmt.Errorf("%v", r)
 			}
-			s.valuesLock.Lock()
+			s.runLatchLock.Lock()
 			if s.errors == nil {
 				s.errors = []error{err}
 			} else {
 				s.errors = append(s.errors, err)
 			}
+			s.runLatchLock.Unlock()
 		}
-		if atomic.AddInt32(&s.jobCounter, -1) <= 0 || r != nil {
-			// Close inbox and done. Need to catch panics for when close is issued on an
-			// already closed channel since multiple routines might encounter errors
-			func() {
-				defer func() {
-					recover()
-				}()
-				close(s.inbox)
-			}()
-			func() {
-				defer func() {
-					recover()
-				}()
-				close(s.done)
-			}()
+		if atomic.AddInt32(&s.jobCounter, -1) <= 0 {
+			close(s.inbox)
+			close(s.done)
 		}
 	}()
 
 	s.runLatchLock.Lock()
-	if s.runLatch[a.ID()] {
+	if s.errors != nil || s.runLatch[a.ID()] {
 		s.runLatchLock.Unlock()
 		return
 	}
