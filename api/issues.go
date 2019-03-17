@@ -3,6 +3,9 @@ package api
 import "github.com/lyraproj/issue/issue"
 
 const (
+	FailedToLoadPlugin          = `WF_FAILED_TO_LOAD_PLUGIN`
+	LyraLinkNoMap               = `WF_LYRA_LINK_NO_MAP`
+	LyraLinkNoExe               = `WF_LYRA_LINK_NO_EXE`
 	NoSuchAttribute             = `WF_NO_SUCH_ATTRIBUTE`
 	NoActivityContext           = `WF_NO_ACTIVITY_CONTEXT`
 	MissingRequiredProperty     = `WF_MISSING_REQUIRED_PROPERTY`
@@ -12,6 +15,9 @@ const (
 )
 
 func init() {
+	issue.Hard(FailedToLoadPlugin, `error while loading plugin executable '%{executable}': %{message}`)
+	issue.Hard(LyraLinkNoMap, `Lyra Link did not contain a YAML map`)
+	issue.Hard(LyraLinkNoExe, `Lyra Link did not contain a valid 'executable' entry`)
 	issue.Hard2(NoSuchAttribute, `%{activity} has no attribute named '%{name}'`, issue.HF{`activity`: issue.Label})
 	issue.Hard(NoActivityContext, `no activity context was found in current scope`)
 	issue.Hard(MissingRequiredProperty, `definition %{service} %{definition} is missing required property '%{key}'`)

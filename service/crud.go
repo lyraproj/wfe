@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
@@ -18,9 +19,13 @@ func StartEra(c px.Context) {
 // is then purged from the Identity store
 func SweepAndGC(c px.Context, prefix string) {
 	identity := getIdentity(c)
+	log := hclog.Default()
+	log.Debug("GC Sweep", "prefix", prefix)
 	identity.sweep(c, prefix)
+	log.Debug("GC Collect garbage", "prefix", prefix)
 	gl := identity.garbage(c)
 	ng := gl.Len()
+	log.Debug("GC Collect garbage", "prefix", prefix, "count", ng)
 	rs := make([]px.List, ng)
 
 	// Store in reverse order
@@ -35,6 +40,7 @@ func SweepAndGC(c px.Context, prefix string) {
 		handler := GetService(c, handlerDef.ServiceId())
 
 		extId := l.At(1)
+		log.Debug("GC delete", "prefix", prefix, "extId", extId)
 		handler.Invoke(c, handlerDef.Identifier().Name(), `delete`, extId)
 		identity.purgeExternal(c, extId)
 	}
@@ -44,6 +50,7 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 	ac := ActivityContext(c)
 	op := GetOperation(ac)
 
+	log := hclog.Default()
 	handlerDef := GetHandler(c, resource.HandlerId())
 	crd := GetProperty(handlerDef, `interface`, types.NewTypeType(types.DefaultObjectType())).(px.ObjectType)
 	identity := getIdentity(c)
@@ -55,6 +62,7 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 	if !explicitExtId {
 		// external id must exist in order to do a read or delete
 		extId = identity.getExternal(c, intId, op == wf.Read || op == wf.Delete)
+		log.Debug("GetExternal", "intId", intId, "extId", extId)
 	}
 
 	var result px.PuppetObject
@@ -64,12 +72,14 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 		if extId == nil {
 			return px.EmptyMap
 		}
+		log.Debug("Read state", "extId", extId)
 		result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
 	case wf.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
+			log.Debug("Read state", "extId", extId)
 			result = handler.Invoke(c, hn, `read`, extId).(px.PuppetObject)
 			break
 		}
@@ -77,15 +87,18 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 		desiredState := GetService(c, resource.ServiceId()).State(c, resource.Name(), input)
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
+			log.Debug("Create state", "intId", intId)
 			rt := handler.Invoke(c, hn, `create`, desiredState).(px.List)
 			result = px.AssertInstance(handlerDef.Label, resource.Type(), rt.At(0)).(px.PuppetObject)
 			extId = rt.At(1)
+			log.Debug("Associate state", "intId", intId, "extId", extId)
 			identity.associate(c, intId, extId)
 			break
 		}
 
 		// Read current state and check if an update is needed
 		var updateNeeded, recreateNeeded bool
+		log.Debug("Read state", "extId", extId)
 		currentState := px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
 
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
@@ -101,18 +114,22 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 				// Update existing content. If an update method exists, call it. If not, then fall back
 				// to delete + create
 				if _, ok := crd.Member(`update`); ok {
+					log.Debug("Update state", "extId", extId)
 					result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `update`, extId, desiredState)).(px.PuppetObject)
 					break
 				}
 			}
 
 			// Rely on that deletion happens by means of GC at end of run
+			log.Debug("Remove external", "extId", extId)
 			identity.removeExternal(c, extId)
 
+			log.Debug("Create state", "intId", intId)
 			rt := handler.Invoke(c, hn, `create`, desiredState)
 			rl := rt.(px.List)
 			result = px.AssertInstance(handlerDef.Label, resource.Type(), rl.At(0)).(px.PuppetObject)
 			extId = rl.At(1)
+			log.Debug("Associate state", "intId", intId, "extId", extId)
 			identity.associate(c, intId, extId)
 		} else {
 			result = currentState

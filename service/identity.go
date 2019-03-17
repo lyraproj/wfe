@@ -83,7 +83,7 @@ func (i *identity) removeInternal(c px.Context, internalID px.Value) {
 }
 */
 
-var IdentityId = px.NewTypedName(px.NsDefinition, serviceapi.IdentityName)
+var IdentityId = px.NewTypedName(px.NsDefinition, "Identity::Service")
 
 func getIdentity(c px.Context) *identity {
 	d := GetDefinition(c, IdentityId)
