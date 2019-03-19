@@ -106,7 +106,7 @@ func (s *workflowEngine) addActivity(na api.Activity) {
 		for ni.Next() {
 			a := ni.Node().(api.Activity)
 			if a.Name() == na.Name() {
-				panic(issue.NewReported(AlreadyDefined, issue.SEVERITY_ERROR, issue.H{`name`: na.Name()}, nil))
+				panic(px.Error(AlreadyDefined, issue.H{`name`: na.Name()}))
 			}
 		}
 	}

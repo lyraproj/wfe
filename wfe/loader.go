@@ -44,7 +44,7 @@ func instantiateLyraLink(c px.Context, l loader.ContentProvidingLoader, tn px.Ty
 	bts := types.BinaryFromFile(lf)
 	link, ok := yaml.Unmarshal(c, bts.Bytes()).(px.OrderedMap)
 	if !ok {
-		panic(px.Error2(issue.NewLocation(lf, 0, 0), api.LyraLinkNoMap, issue.NO_ARGS))
+		panic(px.Error2(issue.NewLocation(lf, 0, 0), api.LyraLinkNoMap, issue.NoArgs))
 	}
 	exe := ``
 	if v, ok := link.Get4(`executable`); ok {
@@ -53,7 +53,7 @@ func instantiateLyraLink(c px.Context, l loader.ContentProvidingLoader, tn px.Ty
 		}
 	}
 	if exe == `` {
-		panic(px.Error2(issue.NewLocation(lf, 0, 0), api.LyraLinkNoExe, issue.NO_ARGS))
+		panic(px.Error2(issue.NewLocation(lf, 0, 0), api.LyraLinkNoExe, issue.NoArgs))
 	}
 	exe = os.ExpandEnv(exe)
 	args := []string{}

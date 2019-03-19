@@ -18,7 +18,7 @@ func ActivityContext(c px.Context) px.OrderedMap {
 	if ac, ok := c.Get(ActivityContextKey); ok {
 		return px.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
 	}
-	panic(px.Error(api.NoActivityContext, issue.NO_ARGS))
+	panic(px.Error(api.NoActivityContext, issue.NoArgs))
 }
 
 func GetOperation(ac px.OrderedMap) wf.Operation {
