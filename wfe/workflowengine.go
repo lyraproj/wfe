@@ -2,6 +2,7 @@ package wfe
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -81,6 +82,7 @@ type workflowEngine struct {
 	jobCounter   int32
 	done         chan bool
 	graph        *simple.DirectedGraph
+	errors       []error
 }
 
 func NewWorkflowEngine(workflow api.Workflow) WorkflowEngine {
@@ -324,6 +326,16 @@ func (s *workflowEngine) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap 
 	}
 	<-s.done
 
+	if s.errors != nil {
+		var err error
+		if len(s.errors) == 1 {
+			err = s.errors[0]
+		} else {
+			err = px.Error(api.MultipleErrors, issue.H{`errors`: s.errors})
+		}
+		panic(err)
+	}
+
 	entries := make([]*types.HashEntry, len(s.Output()))
 	for i, out := range s.Output() {
 		n := out.Name()
@@ -389,16 +401,40 @@ nextName:
 func (s *workflowEngine) activityWorker(ctx px.Context, id int) {
 	for a := range s.inbox {
 		s.runActivity(ctx, a)
-		if atomic.AddInt32(&s.jobCounter, -1) <= 0 {
-			close(s.inbox)
-			close(s.done)
-		}
 	}
 }
 
 func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			var err error
+			switch r := r.(type) {
+			case error:
+				err = r
+			case string:
+				err = errors.New(r)
+			case fmt.Stringer:
+				err = errors.New(r.String())
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			s.runLatchLock.Lock()
+			if s.errors == nil {
+				s.errors = []error{err}
+			} else {
+				s.errors = append(s.errors, err)
+			}
+			s.runLatchLock.Unlock()
+		}
+		if atomic.AddInt32(&s.jobCounter, -1) <= 0 {
+			close(s.inbox)
+			close(s.done)
+		}
+	}()
+
 	s.runLatchLock.Lock()
-	if s.runLatch[a.ID()] {
+	if s.errors != nil || s.runLatch[a.ID()] {
 		s.runLatchLock.Unlock()
 		return
 	}
