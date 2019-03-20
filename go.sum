@@ -21,6 +21,9 @@ github.com/lyraproj/data-protobuf v0.0.0-20181217135414-3d508204b820 h1:fmQMG2XA
 github.com/lyraproj/data-protobuf v0.0.0-20181217135414-3d508204b820/go.mod h1:oQIFBu0fmkiSpSRROEgK5gnjQ/ZDrx3UdpRpT3791Gg=
 github.com/lyraproj/issue v0.0.0-20190213110846-64f0e861a560 h1:VVFwiMUrZe1a64kpEGzrPdeB6QzGEZTAVeo1OTOEWEk=
 github.com/lyraproj/issue v0.0.0-20190213110846-64f0e861a560/go.mod h1:F3Zu9SjR6zROUIVdxgxuX0/Mi4npwgDRalQCNzCyzU0=
+github.com/lyraproj/issue v0.0.0-20190319142512-87bdca048c6e h1:sUMHEmbU4Hwj1BXtYyU/VzFxgD3wv8KLMKfljGOP6RY=
+github.com/lyraproj/issue v0.0.0-20190319145359-029b4266d45b h1:niKVq5VjkwpgwUqXmr7jL+WuoWXbqN2UvkM/grgj4gk=
+github.com/lyraproj/issue v0.0.0-20190319145359-029b4266d45b/go.mod h1:F3Zu9SjR6zROUIVdxgxuX0/Mi4npwgDRalQCNzCyzU0=
 github.com/lyraproj/pcore v0.0.0-20190312090417-c3ed62d0aa05 h1:JNIo0lVg4D0H9A4F2dqHs7AfoRkBXqupEsCYeSp1kuQ=
 github.com/lyraproj/pcore v0.0.0-20190312090417-c3ed62d0aa05/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
 github.com/lyraproj/pcore v0.0.0-20190312155502-c99dcf0e4746 h1:be9oDrVUUbh7G3wxTRK9m+F5aA6OX1ZZ5hLOReOSViM=
@@ -31,6 +34,9 @@ github.com/lyraproj/pcore v0.0.0-20190313112821-30e7bb7af627 h1:BcQpv7SBmbdFgQUh
 github.com/lyraproj/pcore v0.0.0-20190313112821-30e7bb7af627/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
 github.com/lyraproj/pcore v0.0.0-20190317133239-e367a175e431 h1:y8tbegVN5uflsdpCqMfIRDGHLQWBy29VmKs4WGEG1mI=
 github.com/lyraproj/pcore v0.0.0-20190317133239-e367a175e431/go.mod h1:hKQkpsnpeamSKHIhhrKdhNAAViuZNfKYC3x0Drmra2w=
+github.com/lyraproj/pcore v0.0.0-20190319142435-27ce0d28a7c5 h1:XTHjvfLXrF73FG9nTiJC4ej/W0wk6ZCDpS8WMSXejdo=
+github.com/lyraproj/pcore v0.0.0-20190319163905-c435c6e1b96e h1:W2omAJqkyi++wiadcWBNKTyBnlLJ8p2WXYFTMu5AsMo=
+github.com/lyraproj/pcore v0.0.0-20190319163905-c435c6e1b96e/go.mod h1:zaYm7Mn2rIKNNpcMGy+QkWUqoTpGAQiAmVwJpJ4wYDc=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190221131608-f58f6fb22150 h1:jYUvV7OgvPhhx7OiposQ/sXswFByP3l6rLSeBOre6kM=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190221131608-f58f6fb22150/go.mod h1:/w2Dkqs8BNYj5xYQMOTg23yTJD4IUfMrdpgVBCR8xMw=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190304221938-dfca410f5e9b h1:gjaLcdm2kLS2rxxj5QGiVJwpJUjtL6XAk4eEYW5kBZQ=
@@ -60,6 +66,11 @@ github.com/lyraproj/servicesdk v0.0.0-20190313114433-a66d98e28e69/go.mod h1:iHEE
 github.com/lyraproj/servicesdk v0.0.0-20190315045342-ec734d248e16 h1:/Nbrl/oCADzjzTo8yZaYTFzaWdiLjNlUzmw7wkWaiOw=
 github.com/lyraproj/servicesdk v0.0.0-20190317133540-499c41434691 h1:tlgQyIQaaaE96JwBatRJHZL9DhZ5Z8UExBdDLjnsxNE=
 github.com/lyraproj/servicesdk v0.0.0-20190317133540-499c41434691/go.mod h1:moZ3fuB4G5R94X5uPwFH8ibtdmDPQ9Nql6NXhbmG1yM=
+github.com/lyraproj/servicesdk v0.0.0-20190318160456-0b61ba01b3cc h1:rn6SZbnG76qs53cb+Bnn+IaWZ/MTKkPgJKx1r+4mDk8=
+github.com/lyraproj/servicesdk v0.0.0-20190318160456-0b61ba01b3cc/go.mod h1:moZ3fuB4G5R94X5uPwFH8ibtdmDPQ9Nql6NXhbmG1yM=
+github.com/lyraproj/servicesdk v0.0.0-20190319102917-6f7f6236fe60 h1:Qjwl/HWTtpRgnejK/ALc8fKdsjeVymRe4t9e6Krkt1c=
+github.com/lyraproj/servicesdk v0.0.0-20190319214040-e12463a5bc49 h1:8rhGPUyE5hTyjl412EaAkRr44coBAOaIijOtKCo0Ihc=
+github.com/lyraproj/servicesdk v0.0.0-20190319214040-e12463a5bc49/go.mod h1:++0wnIhGpy7fvoBYFoMuhhByKJikXas4segsbrdJP90=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
