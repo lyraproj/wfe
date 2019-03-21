@@ -76,8 +76,7 @@ func (r *resource) Style() string {
 }
 
 func (r *resource) WithIndex(index int) api.Step {
-	rc := resource{}
-	rc = *r // Copy by value
+	rc := *r // Copy by value
 	rc.setIndex(index)
 	return &rc
 }

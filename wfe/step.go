@@ -40,6 +40,8 @@ func CreateStep(c px.Context, def serviceapi.Definition) api.Step {
 		return Workflow(c, def)
 	case `action`:
 		return Action(def)
+	case `reference`:
+		return Reference(c, def)
 	}
 	return nil
 }

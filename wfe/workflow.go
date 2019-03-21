@@ -35,8 +35,7 @@ func (w *workflow) Style() string {
 }
 
 func (w *workflow) WithIndex(index int) api.Step {
-	wc := workflow{}
-	wc = *w // Copy by value
+	wc := *w // Copy by value
 	wc.setIndex(index)
 	return &wc
 }

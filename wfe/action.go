@@ -54,8 +54,7 @@ func (s *action) Style() string {
 }
 
 func (a *action) WithIndex(index int) api.Step {
-	ac := action{}
-	ac = *a // Copy by value
+	ac := *a // Copy by value
 	ac.setIndex(index)
 	return &ac
 }
