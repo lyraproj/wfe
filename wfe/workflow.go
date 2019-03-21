@@ -30,20 +30,16 @@ func (w *workflow) Style() string {
 	return `workflow`
 }
 
-func Workflow(def serviceapi.Definition) api.Workflow {
+func Workflow(c px.Context, def serviceapi.Definition) api.Workflow {
 	wf := &workflow{}
 	wf.Init(def)
+	activities := service.GetProperty(def, `activities`, DefinitionListType).(px.List)
+	as := make([]api.Activity, activities.Len())
+	activities.EachWithIndex(func(v px.Value, i int) { as[i] = CreateActivity(c, v.(serviceapi.Definition)) })
+	wf.activities = as
 	return wf
 }
 
 func (w *workflow) Activities() []api.Activity {
 	return w.activities
-}
-
-func (w *workflow) Init(def serviceapi.Definition) {
-	w.Activity.Init(def)
-	activities := service.GetProperty(def, `activities`, DefinitionListType).(px.List)
-	as := make([]api.Activity, activities.Len())
-	activities.EachWithIndex(func(v px.Value, i int) { as[i] = CreateActivity(v.(serviceapi.Definition)) })
-	w.activities = as
 }

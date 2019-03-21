@@ -22,11 +22,11 @@ type iterator struct {
 	resultName string
 }
 
-func Iterator(def serviceapi.Definition) api.Activity {
+func Iterator(c px.Context, def serviceapi.Definition) api.Activity {
 	over := getParameters(`over`, def.Properties())
 	variables := getParameters(`variables`, def.Properties())
 	style := wf.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
-	activity := CreateActivity(service.GetProperty(def, `producer`, serviceapi.DefinitionMetaType).(serviceapi.Definition))
+	activity := CreateActivity(c, service.GetProperty(def, `producer`, serviceapi.DefinitionMetaType).(serviceapi.Definition))
 	resultName := wf.LeafName(def.Identifier().Name())
 	switch style {
 	case wf.IterationStyleRange:
