@@ -24,18 +24,18 @@ type Activity struct {
 	output    []px.Parameter
 }
 
-func CreateActivity(def serviceapi.Definition) api.Activity {
+func CreateActivity(c px.Context, def serviceapi.Definition) api.Activity {
 	hclog.Default().Debug(`creating activity`, `style`, service.GetStringProperty(def, `style`))
 
 	switch service.GetStringProperty(def, `style`) {
 	case `stateHandler`:
 		return StateHandler(def)
 	case `iterator`:
-		return Iterator(def)
+		return Iterator(c, def)
 	case `resource`:
-		return Resource(def)
+		return Resource(c, def)
 	case `workflow`:
-		return Workflow(def)
+		return Workflow(c, def)
 	case `action`:
 		return Action(def)
 	}
