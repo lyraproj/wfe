@@ -41,10 +41,9 @@ func Resource(c px.Context, def serviceapi.Definition) api.Activity {
 		// Ensure that the handler for the resource type is loaded prior to attempting
 		// the resolve.
 		if tr, ok := rs.(*types.TypeReferenceType); ok && types.TypeNamePattern.MatchString(tr.TypeString()) {
-			_, ok = px.Load(c, px.NewTypedName(px.NsHandler, tr.TypeString()))
-		}
-		if ok {
-			rt = rs.Resolve(c)
+			if _, ok = px.Load(c, px.NewTypedName(px.NsHandler, tr.TypeString())); ok {
+				rt = rs.Resolve(c)
+			}
 		}
 	}
 	r.typ = px.AssertType(func() string { return "property resourceType of activity " + def.Identifier().Name() },
