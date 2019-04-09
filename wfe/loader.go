@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
@@ -97,15 +99,93 @@ func instantiatePp(c px.Context, l loader.ContentProvidingLoader, tn px.TypedNam
 	loadMetadata(c, dl, ``, nil, sa)
 }
 
+var once sync.Once
+var dlvConfigType px.Type
+
+const dlvListenDefault = `localhost:2345`
+const dlvBinaryDefault = `dlv`
+const dlvApiVersionDefault = `2`
+
+func convertToDebug(c px.Context, dc px.Value, cmd string, cmdArgs []string) (string, []string) {
+	once.Do(func() {
+		dlvConfigType = c.ParseType(
+			`Variant[
+				String[1],
+				Struct[
+					process => Variant[String[1], Hash[String[1],String[1]]],
+					Optional[binary] => String[1],
+					Optional[api] => Integer[1]]]`)
+	})
+
+	px.AssertInstance(`dlv configuration`, dlvConfigType, dc)
+	lg := hclog.Default()
+	match := func(v px.Value) bool {
+		s := v.String()
+		pm, err := regexp.Compile(s)
+		if err != nil {
+			lg.Error(`Unable to compile dlv configuration process match: `, `pattern`, s, `error`, err.Error())
+		}
+		if pm.MatchString(cmd) {
+			lg.Debug(`dlv configuration process match`, `pattern`, s, `process`, cmd)
+			return true
+		}
+		return false
+	}
+
+	found := false
+	listen := dlvListenDefault
+	api := dlvApiVersionDefault
+	dlv := dlvBinaryDefault
+	if p, ok := dc.(px.StringValue); ok {
+		// Config is just a string. The string then denotes the process pattern
+		found = match(p)
+	} else {
+		dch := dc.(px.OrderedMap)
+		pe, _ := dch.Get4(`process`)
+		if p, ok := pe.(px.StringValue); ok {
+			found = match(p)
+		} else {
+			// Key is process pattern, value is listen address. First match wins
+			pe.(px.OrderedMap).Find(func(v px.Value) bool {
+				e := v.(px.MapEntry)
+				found = match(e.Key())
+				if found {
+					listen = e.Value().String()
+				}
+				return found
+			})
+		}
+
+		if found {
+			if a, ok := dch.Get4(`api`); ok {
+				api = a.String()
+			}
+			if binary, ok := dch.Get4(`binary`); ok {
+				dlv = binary.String()
+			}
+		}
+	}
+
+	if found {
+		lg.Info(`starting plugin for debugging`, `dlv`, dlv, `command`, cmd, `listen`, listen)
+		cmdArgs = append([]string{`exec`, cmd, `--headless`, `--listen`, listen, `--log-dest`, `2`, `--api-version`, api}, cmdArgs...)
+		cmd = dlv
+	}
+	return cmd, cmdArgs
+}
+
 func loadPluginMetadata(c px.Context, dl px.DefiningLoader, cmd string, cmdArgs ...string) {
+	if dc, ok := c.Get(api.LyraDlvConfigKey); ok {
+		cmd, cmdArgs = convertToDebug(c, dc.(px.Value), cmd, cmdArgs)
+	}
 	serviceCmd := exec.CommandContext(c, cmd, cmdArgs...)
 	service, err := grpc.Load(serviceCmd, nil)
 	if err != nil {
 		panic(px.Error(api.FailedToLoadPlugin, issue.H{`executable`: cmd, `message`: err.Error()}))
 	}
 
-	ti := service.Identifier(c)
 	lg := hclog.Default()
+	ti := service.Identifier(c)
 	lg.Debug("loaded executable", "plugin", ti)
 
 	dl.SetEntry(ti, px.NewLoaderEntry(service, nil))
@@ -116,22 +196,24 @@ func loadPluginMetadata(c px.Context, dl px.DefiningLoader, cmd string, cmdArgs 
 }
 
 func loadMetadata(c px.Context, l px.DefiningLoader, cmd string, cmdArgs []string, service serviceapi.Service) {
-	_, defs := service.Metadata(c)
-	if len(defs) == 0 {
-		return
+	ts, defs := service.Metadata(c)
+
+	lg := hclog.Default()
+	if ts != nil {
+		lg.Debug(`loaded TypeSet`, `name`, ts.Name(), `count`, ts.Types().Len())
 	}
 
-	// Register definitions
-	lg := hclog.Default()
-	for _, def := range defs {
-		le := px.NewLoaderEntry(def, nil)
-		l.SetEntry(def.Identifier(), le)
-		lg.Debug("registered definition", "definition", def.Identifier().Name())
+	if len(defs) > 0 {
+		lg.Debug(`loaded Definitions`, `count`, len(defs))
 
-		if handlerFor, ok := def.Properties().Get4(`handlerFor`); ok {
-			hn := px.NewTypedName(px.NsHandler, handlerFor.(issue.Named).Name())
-			l.SetEntry(hn, le)
-			lg.Debug("registered handler", "definition", def.Identifier().Name(), "handler for", hn.Name())
+		// Register definitions
+		for _, def := range defs {
+			le := px.NewLoaderEntry(def, nil)
+			l.SetEntry(def.Identifier(), le)
+			if handlerFor, ok := def.Properties().Get4(`handlerFor`); ok {
+				hn := px.NewTypedName(px.NsHandler, handlerFor.(issue.Named).Name())
+				l.SetEntry(hn, le)
+			}
 		}
 	}
 }
