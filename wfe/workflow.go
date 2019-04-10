@@ -22,12 +22,23 @@ func (w *workflow) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
 	return wf.Run(ctx, input)
 }
 
+func (w *workflow) Identifier() string {
+	return ActivityId(w)
+}
+
 func (w *workflow) Label() string {
 	return ActivityLabel(w)
 }
 
 func (w *workflow) Style() string {
 	return `workflow`
+}
+
+func (w *workflow) WithIndex(index int) api.Activity {
+	wc := workflow{}
+	wc = *w // Copy by value
+	wc.setIndex(index)
+	return &wc
 }
 
 func Workflow(c px.Context, def serviceapi.Definition) api.Workflow {
