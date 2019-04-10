@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/url"
+
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/servicesdk/wf"
@@ -20,8 +22,14 @@ type Activity interface {
 	// or iterator inputs changes within the parent chain of this Activity.
 	Identifier() string
 
+	// IdParams returns optional URL parameter values that becomes part of the Identifier
+	IdParams() url.Values
+
 	// The Id of the service that provides this activity
 	ServiceId() px.TypedName
+
+	// Returns a copy of this Activity with index set to the given value
+	WithIndex(index int) Activity
 
 	// Style returns the activity style, 'workflow', 'resource', 'stateHandler', or 'action'.
 	Style() string

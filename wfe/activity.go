@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -22,6 +23,7 @@ type Activity struct {
 	when      wf.Condition
 	input     []px.Parameter
 	output    []px.Parameter
+	index     int
 }
 
 func CreateActivity(c px.Context, def serviceapi.Definition) api.Activity {
@@ -50,12 +52,22 @@ func (a *Activity) ServiceId() px.TypedName {
 	return a.serviceId
 }
 
-func (a *Activity) Style() string {
-	return `activity`
-}
-
 func ActivityLabel(a api.Activity) string {
 	return fmt.Sprintf(`%s '%s'`, a.Style(), a.Name())
+}
+
+func ActivityId(a api.Activity) string {
+	b := bytes.NewBufferString(`lyra://puppet.com`)
+	for _, s := range strings.Split(a.Name(), `::`) {
+		b.WriteByte('/')
+		b.WriteString(url.PathEscape(s))
+	}
+	vs := a.IdParams()
+	if len(vs) > 0 {
+		b.WriteByte('?')
+		b.WriteString(vs.Encode())
+	}
+	return b.String()
 }
 
 func (a *Activity) When() wf.Condition {
@@ -75,6 +87,7 @@ func (a *Activity) Output() []px.Parameter {
 }
 
 func (a *Activity) Init(def serviceapi.Definition) {
+	a.index = -1
 	a.serviceId = def.ServiceId()
 	a.name = def.Identifier().Name()
 	props := def.Properties()
@@ -97,13 +110,11 @@ func getParameters(key string, props px.OrderedMap) []px.Parameter {
 	return []px.Parameter{}
 }
 
-func (a *Activity) Identifier() string {
-	b := bytes.NewBufferString(`lyra://puppet.com`)
-	for _, s := range strings.Split(a.name, `::`) {
-		b.WriteByte('/')
-		b.WriteString(url.PathEscape(s))
+func (a *Activity) IdParams() url.Values {
+	if a.index >= 0 {
+		return url.Values{`index`: {strconv.Itoa(a.index)}}
 	}
-	return b.String()
+	return url.Values{}
 }
 
 func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Parameter) px.Value {
@@ -114,4 +125,9 @@ func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Para
 		panic(px.Error(ParameterUnresolved, issue.H{`activity`: a, `parameter`: p.Name()}))
 	}
 	return types.ResolveDeferred(ctx, p.Value(), input)
+}
+
+// setIndex must only be called after a direct cloning operation on the instance, i.e. from WithIndex()
+func (a *Activity) setIndex(index int) {
+	a.index = index
 }

@@ -47,10 +47,21 @@ func (a *stateHandler) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
 	}
 }
 
+func (a *stateHandler) Identifier() string {
+	return ActivityId(a)
+}
+
 func (a *stateHandler) Label() string {
 	return ActivityLabel(a)
 }
 
 func (a *stateHandler) Style() string {
 	return `stateHandler`
+}
+
+func (a *stateHandler) WithIndex(index int) api.Activity {
+	ac := stateHandler{}
+	ac = *a // Copy by value
+	ac.setIndex(index)
+	return &ac
 }

@@ -17,18 +17,25 @@ const maxParallel = 100
 
 type iterator struct {
 	api.Activity
-	over       []px.Parameter
+	over       px.Value
 	variables  []px.Parameter
 	resultName string
 }
 
 func Iterator(c px.Context, def serviceapi.Definition) api.Activity {
-	over := getParameters(`over`, def.Properties())
-	variables := getParameters(`variables`, def.Properties())
+	over := def.Properties().Get5(`over`, px.Undef)
+	variables := getParameters(`variable`, def.Properties())
+	if len(variables) == 0 {
+		variables = getParameters(`variables`, def.Properties())
+	}
 	style := wf.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
 	activity := CreateActivity(c, service.GetProperty(def, `producer`, serviceapi.DefinitionMetaType).(serviceapi.Definition))
 	resultName := wf.LeafName(def.Identifier().Name())
 	switch style {
+	case wf.IterationStyleEach:
+		return NewEach(activity, resultName, over, variables)
+	case wf.IterationStyleEachPair:
+		return NewEachPair(activity, resultName, over, variables)
 	case wf.IterationStyleRange:
 		return NewRange(activity, resultName, over, variables)
 	case wf.IterationStyleTimes:
@@ -42,7 +49,7 @@ func (it *iterator) IterationStyle() wf.IterationStyle {
 	panic("implement me")
 }
 
-func (it *iterator) Over() []px.Parameter {
+func (it *iterator) Over() px.Value {
 	return it.over
 }
 
@@ -53,8 +60,7 @@ func (it *iterator) Producer() api.Activity {
 // Input returns the Input declared for the stateHandler + Over() and - Variables
 func (it *iterator) Input() []px.Parameter {
 	input := it.Producer().Input()
-	all := make([]px.Parameter, 0, len(it.over)+len(input)-len(it.variables))
-	all = append(all, it.over...)
+	all := make([]px.Parameter, 0, len(input)-len(it.variables))
 nextInput:
 	for _, in := range input {
 		for _, v := range it.variables {
@@ -67,24 +73,34 @@ nextInput:
 	return all
 }
 
-// Output returns the on parameter, named after the activity which is a hash of
-// key and value parameters of the activity.
+// Output returns one parameter named after the activity. It is always an Array. Each
+// entry of that array is an element that reflects the output from the iterated
+// activity.
+//
+// An activity that only outputs one element will produce an array of such elements
+// An activity that produces multiple elements will produce an array where each
+// element is a hash
 func (it *iterator) Output() []px.Parameter {
 	output := it.Producer().Output()
-
-	// Constructor validates that activity output consists of two values, a key
-	// and a value.
-	key := output[0]
-	value := output[1]
+	var vt px.Type
+	if len(output) == 1 {
+		vt = output[0].Type()
+	} else {
+		se := make([]*types.StructElement, len(output))
+		for i, p := range output {
+			se[i] = types.NewStructElement(types.WrapString(p.Name()), p.Type())
+		}
+		vt = types.NewStructType(se)
+	}
 	return []px.Parameter{
-		px.NewParameter(it.resultName, types.NewHashType(key.Type(), value.Type(), nil), nil, false)}
+		px.NewParameter(it.resultName, types.NewArrayType(vt, nil), nil, false)}
 }
 
 func (it *iterator) Variables() []px.Parameter {
 	return it.variables
 }
 
-func (it *iterator) iterateRange(ctx px.Context, vars px.OrderedMap, start, end int64) px.OrderedMap {
+func (it *iterator) iterate(ctx px.Context, vars px.OrderedMap, start, end int64, iterFunc func(int) px.OrderedMap) px.OrderedMap {
 
 	done := make(chan bool)
 	count := end - start
@@ -93,9 +109,7 @@ func (it *iterator) iterateRange(ctx px.Context, vars px.OrderedMap, start, end 
 		numWorkers = maxParallel
 	}
 
-	entries := make([]*types.HashEntry, count)
-	p0 := it.Variables()[0].Name()
-	p := it.Producer()
+	els := make([]px.Value, count)
 	jobs := make(chan int64)
 	for i := 0; i < numWorkers; i++ {
 		px.Fork(ctx, func(fc px.Context) {
@@ -107,8 +121,19 @@ func (it *iterator) iterateRange(ctx px.Context, vars px.OrderedMap, start, end 
 							done <- true
 						}
 					}()
-					result := p.Run(fc, vars.Merge(px.SingletonMap(p0, types.WrapInteger(int64(ix)))))
-					entries[ix-start] = types.WrapHashEntry(result.Get5(`key`, px.Undef), result.Get5(`value`, px.Undef))
+					p := it.Producer()
+					input := iterFunc(int(ix))
+					ip := p.WithIndex(int(ix))
+					result := ip.Run(fc, input)
+					v := px.Undef
+					if len(p.Output()) == 1 {
+						if result.Len() > 0 {
+							v = result.At(0).(px.MapEntry).Value()
+						}
+					} else {
+						v = result
+					}
+					els[ix-start] = v
 				}()
 			}
 		})
@@ -118,64 +143,24 @@ func (it *iterator) iterateRange(ctx px.Context, vars px.OrderedMap, start, end 
 		jobs <- i
 	}
 	<-done
-	return px.SingletonMap(it.resultName, types.WrapHash(entries))
+	return px.SingletonMap(it.resultName, types.WrapValues(els))
 }
 
-func resolveInput(c px.Context, it api.Iterator, input px.OrderedMap) ([]px.Value, px.OrderedMap) {
+func resolveInput(c px.Context, it api.Iterator, input px.OrderedMap) (px.Value, px.OrderedMap) {
 	// Resolve the parameters that acts as input to the iteration.
-	over := make([]px.Value, len(it.Over()))
-	vars := make([]*types.HashEntry, 0, len(it.Input())-len(it.Over()))
-
-	for i, o := range it.Over() {
-		arg := input.Get5(o.Name(), px.Undef)
-		if df, ok := arg.(types.Deferred); ok {
-			arg = df.Resolve(c, c.Scope())
-		}
-		over[i] = arg
-	}
+	vars := make([]*types.HashEntry, 0, len(it.Input()))
 
 	// Strip input intended for the iterator from the list intended for the activity that will be called by the iterator
-nextInput:
 	for _, ap := range it.Producer().Input() {
-		for _, op := range it.Over() {
-			if op.Name() == ap.Name() {
-				continue nextInput
-			}
-		}
 		if ev, ok := input.GetEntry(ap.Name()); ok {
 			vars = append(vars, ev.(*types.HashEntry))
 		}
 	}
-	return over, types.WrapHash(vars)
+	return types.ResolveDeferred(c, it.Over(), c.Scope()), types.WrapHash(vars)
 }
 
-func assertOverCount(it api.Iterator, expectedCount int) {
-	actualCount := len(it.Over())
-	if actualCount != expectedCount {
-		panic(px.Error(IterationParameterInvalidCount,
-			issue.H{`iterator`: it, `expected`: expectedCount, `actual`: actualCount}))
-	}
-}
-
-func assertVariableCount(it api.Iterator, expectedCount int) {
-	actualCount := len(it.Variables())
-	if actualCount != expectedCount {
-		panic(px.Error(IterationVariableInvalidCount,
-			issue.H{`iterator`: it, `expected`: expectedCount, `actual`: actualCount}))
-	}
-}
-
-func Validate(it api.Iterator, expectedOver, expectedVars int) {
-	assertOverCount(it, expectedOver)
-	assertVariableCount(it, expectedVars)
-
+func Validate(it api.Iterator) {
 	a := it.Producer()
-
-	// Ensure that output consists of a key and a value parameter
-	o := a.Output()
-	if len(o) != 2 || !(o[0].Name() == `key` && o[1].Name() == `value` || o[1].Name() == `key` && o[0].Name() == `value`) {
-		panic(px.Error(IterationActivityWrongOutput, issue.H{`iterator`: it}))
-	}
 
 	// Ensure that input contains output produced by the iterator
 	is := a.Input()
@@ -191,27 +176,155 @@ nextVar:
 	}
 }
 
-func assertInt(t api.Iterator, arg px.Value, paramIdx int) int64 {
+func assertInt(t api.Iterator, arg px.Value, name string) int64 {
 	iv, ok := arg.(px.Integer)
 	if !ok {
 		panic(px.Error(IterationParameterWrongType, issue.H{
-			`iterator`: t, `parameter`: t.Over()[paramIdx].Name(), `expected`: `Integer`, `actual`: arg.PType()}))
+			`iterator`: t, `parameter`: name, `expected`: `Integer`, `actual`: arg.PType()}))
 	}
 	return iv.Int()
+}
+
+func assertRange(t api.Iterator, arg px.Value) (int64, int64) {
+	a, ok := arg.(*types.Array)
+	if !(ok && a.Len() == 2) {
+		panic(px.Error(IterationParameterWrongType, issue.H{
+			`iterator`: t, `parameter`: `over`, `expected`: `Array`, `actual`: arg.PType()}))
+	}
+	return assertInt(t, a.At(0), `over[0]`), assertInt(t, a.At(1), `over[1]`)
+}
+
+func assertList(t api.Iterator, arg px.Value) px.List {
+	if a, ok := arg.(*types.Array); ok {
+		return a
+	}
+	panic(px.Error(IterationParameterWrongType, issue.H{
+		`iterator`: t, `parameter`: `over`, `expected`: `Array`, `actual`: arg.PType()}))
+}
+
+func assertMap(t api.Iterator, arg px.Value) px.OrderedMap {
+	if h, ok := arg.(px.OrderedMap); ok {
+		return h
+	}
+	panic(px.Error(IterationParameterWrongType, issue.H{
+		`iterator`: t, `parameter`: `over`, `expected`: `Hash`, `actual`: arg.PType()}))
 }
 
 func iterLabel(it api.Iterator) string {
 	return fmt.Sprintf(`%s %s iteration`, it.Style(), ActivityLabel(it))
 }
 
-func NewTimes(activity api.Activity, name string, over []px.Parameter, variables []px.Parameter) api.Iterator {
-	it := &times{iterator{activity, over, variables, name}}
-	Validate(it, 1, 1)
+type each struct {
+	iterator
+}
+
+func NewEach(activity api.Activity, name string, over px.Value, variables []px.Parameter) api.Iterator {
+	it := &each{iterator{activity, over, variables, name}}
+	Validate(it)
 	return it
+}
+
+func (t *each) Label() string {
+	return iterLabel(t)
+}
+
+func (t *each) IterationStyle() wf.IterationStyle {
+	return wf.IterationStyleEach
+}
+
+func (t *each) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+	over, vars := resolveInput(ctx, t, input)
+	list := assertList(t, over)
+	return t.iterate(ctx, vars, 0, int64(list.Len()), func(ix int) px.OrderedMap {
+		vs := t.Variables()
+		nv := len(vs)
+		el := list.At(ix)
+		switch nv {
+		case 0:
+			// Do nothing
+		case 1:
+			input = input.Merge(px.SingletonMap(vs[0].Name(), el))
+		default:
+			es := make([]*types.HashEntry, 0, len(vs))
+			switch el := el.(type) {
+			case *types.HashEntry:
+				// Map key and value to first two positions
+				es = append(es, types.WrapHashEntry2(vs[0].Name(), el.Key()), types.WrapHashEntry2(vs[1].Name(), el.Value()))
+			case *types.Array:
+				// Map as many as possible by index
+				el.EachWithIndex(func(e px.Value, i int) {
+					if i < nv {
+						es = append(es, types.WrapHashEntry2(vs[i].Name(), e))
+					}
+				})
+			case *types.Hash:
+				// Map as many as possible by name
+				for _, p := range vs {
+					if v, ok := el.Get4(p.Name()); ok {
+						es = append(es, types.WrapHashEntry2(p.Name(), v))
+					}
+				}
+			case px.PuppetObject:
+				// Map as many as possible by name
+				pt := el.PType().(px.ObjectType)
+				for _, p := range vs {
+					if v, ok := pt.Member(p.Name()); ok {
+						if a, ok := v.(px.Attribute); ok {
+							es = append(es, types.WrapHashEntry2(p.Name(), a.Get(el)))
+						}
+					}
+				}
+			default:
+				es = append(es, types.WrapHashEntry2(vs[0].Name(), el))
+			}
+
+			if len(es) > 0 {
+				input = input.Merge(types.WrapHash(es))
+			}
+		}
+		return input
+	})
+}
+
+type eachPair struct {
+	iterator
+}
+
+func NewEachPair(activity api.Activity, name string, over px.Value, variables []px.Parameter) api.Iterator {
+	it := &eachPair{iterator{activity, over, variables, name}}
+	Validate(it)
+	return it
+}
+
+func (t *eachPair) Label() string {
+	return iterLabel(t)
+}
+
+func (t *eachPair) IterationStyle() wf.IterationStyle {
+	return wf.IterationStyleEachPair
+}
+
+func (t *eachPair) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+	over, vars := resolveInput(ctx, t, input)
+	mp := assertMap(t, over)
+	p0 := t.Variables()[0].Name()
+	p1 := t.Variables()[1].Name()
+	return t.iterate(ctx, vars, 0, int64(mp.Len()), func(ix int) px.OrderedMap {
+		entry := mp.At(ix).(px.MapEntry)
+		ke := types.WrapHashEntry2(p0, entry.Key())
+		ve := types.WrapHashEntry2(p1, entry.Value())
+		return vars.Merge(types.WrapHash([]*types.HashEntry{ke, ve}))
+	})
 }
 
 type times struct {
 	iterator
+}
+
+func NewTimes(activity api.Activity, name string, over px.Value, variables []px.Parameter) api.Iterator {
+	it := &times{iterator{activity, over, variables, name}}
+	Validate(it)
+	return it
 }
 
 func (t *times) Label() string {
@@ -224,16 +337,22 @@ func (t *times) IterationStyle() wf.IterationStyle {
 
 func (t *times) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
 	over, vars := resolveInput(ctx, t, input)
-	return t.iterateRange(ctx, vars, 0, assertInt(t, over[0], 0))
+	return t.iterate(ctx, vars, 0, assertInt(t, over, `over`), func(ix int) px.OrderedMap {
+		vs := t.Variables()
+		if len(vs) > 0 {
+			input = input.Merge(px.SingletonMap(t.Variables()[0].Name(), types.WrapInteger(int64(ix))))
+		}
+		return input
+	})
 }
 
 type itRange struct {
 	iterator
 }
 
-func NewRange(activity api.Activity, name string, over []px.Parameter, variables []px.Parameter) api.Iterator {
+func NewRange(activity api.Activity, name string, over px.Value, variables []px.Parameter) api.Iterator {
 	it := &itRange{iterator{activity, over, variables, name}}
-	Validate(it, 2, 1)
+	Validate(it)
 	return it
 }
 
@@ -247,5 +366,12 @@ func (t *itRange) IterationStyle() wf.IterationStyle {
 
 func (t *itRange) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
 	over, vars := resolveInput(ctx, t, input)
-	return t.iterateRange(ctx, vars, assertInt(t, over[0], 0), assertInt(t, over[1], 1))
+	from, to := assertRange(t, over)
+	return t.iterate(ctx, vars, from, to, func(ix int) px.OrderedMap {
+		vs := t.Variables()
+		if len(vs) > 0 {
+			input = input.Merge(px.SingletonMap(t.Variables()[0].Name(), types.WrapInteger(int64(ix))))
+		}
+		return input
+	})
 }

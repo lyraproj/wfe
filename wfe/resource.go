@@ -53,10 +53,14 @@ func Resource(c px.Context, def serviceapi.Definition) api.Activity {
 }
 
 func (r *resource) Identifier() string {
-	vs := make(url.Values, 3)
+	return ActivityId(r)
+}
+
+func (r *resource) IdParams() url.Values {
+	vs := r.Activity.IdParams()
 	vs.Add(`rt`, r.typ.Name())
 	vs.Add(`hid`, r.HandlerId().Name())
-	return r.Activity.Identifier() + `?` + vs.Encode()
+	return vs
 }
 
 func (r *resource) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
@@ -69,4 +73,11 @@ func (r *resource) Label() string {
 
 func (r *resource) Style() string {
 	return `resource`
+}
+
+func (r *resource) WithIndex(index int) api.Activity {
+	rc := resource{}
+	rc = *r // Copy by value
+	rc.setIndex(index)
+	return &rc
 }

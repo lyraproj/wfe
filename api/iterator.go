@@ -14,9 +14,8 @@ type Iterator interface {
 	// Producer returns the Activity that will be invoked once for each iteration
 	Producer() Activity
 
-	// Over returns what this iterator will iterate over. These parameters will be added
-	// to the declared input set when the final requirements for the activity are computed.
-	Over() []px.Parameter
+	// Over returns what this iterator will iterate over
+	Over() px.Value
 
 	// Variables returns the variables that this iterator will produce for each iteration. These
 	// variables will be removed from the declared input set when the final requirements

@@ -35,12 +35,13 @@ func SweepAndGC(c px.Context, prefix string) {
 	})
 
 	for _, l := range rs {
-		hid := types.ParseURI(l.At(0).String()).Query().Get(`hid`)
+		uri := types.ParseURI(l.At(0).String())
+		hid := uri.Query().Get(`hid`)
 		handlerDef := GetHandler(c, px.NewTypedName(px.NsHandler, hid))
 		handler := GetService(c, handlerDef.ServiceId())
 
 		extId := l.At(1)
-		log.Debug("GC delete", "prefix", prefix, "extId", extId)
+		log.Debug("GC delete", "prefix", prefix, "intId", uri.String(), "extId", extId)
 		handler.Invoke(c, handlerDef.Identifier().Name(), `delete`, extId)
 		identity.purgeExternal(c, extId)
 	}

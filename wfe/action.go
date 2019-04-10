@@ -45,6 +45,17 @@ func (s *action) Label() string {
 	return ActivityLabel(s)
 }
 
+func (a *action) Identifier() string {
+	return ActivityId(a)
+}
+
 func (s *action) Style() string {
 	return `action`
+}
+
+func (a *action) WithIndex(index int) api.Activity {
+	ac := action{}
+	ac = *a // Copy by value
+	ac.setIndex(index)
+	return &ac
 }
