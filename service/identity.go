@@ -21,8 +21,8 @@ func (i *identity) bumpEra(c px.Context) {
 	i.invokable.Invoke(c, i.id, `bumpEra`)
 }
 
-func (i *identity) garbage(c px.Context) px.List {
-	result := i.invokable.Invoke(c, i.id, `garbage`)
+func (i *identity) garbage(c px.Context, prefix string) px.List {
+	result := i.invokable.Invoke(c, i.id, `garbage`, types.WrapString(prefix))
 	if l, ok := result.(px.List); ok {
 		return l
 	}

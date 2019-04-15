@@ -23,7 +23,7 @@ func SweepAndGC(c px.Context, prefix string) {
 	log.Debug("GC Sweep", "prefix", prefix)
 	identity.sweep(c, prefix)
 	log.Debug("GC Collect garbage", "prefix", prefix)
-	gl := identity.garbage(c)
+	gl := identity.garbage(c, prefix)
 	ng := gl.Len()
 	log.Debug("GC Collect garbage", "prefix", prefix, "count", ng)
 	rs := make([]px.List, ng)
