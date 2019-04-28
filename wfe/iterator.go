@@ -30,7 +30,12 @@ func Iterator(c px.Context, def serviceapi.Definition) api.Activity {
 	}
 	style := wf.NewIterationStyle(service.GetStringProperty(def, `iterationStyle`))
 	activity := CreateActivity(c, service.GetProperty(def, `producer`, serviceapi.DefinitionMetaType).(serviceapi.Definition))
-	resultName := wf.LeafName(def.Identifier().Name())
+	var resultName string
+	if into, ok := def.Properties().Get4(`into`); ok {
+		resultName = into.String()
+	} else {
+		resultName = wf.LeafName(def.Identifier().Name())
+	}
 	switch style {
 	case wf.IterationStyleEach:
 		return NewEach(activity, resultName, over, variables)
