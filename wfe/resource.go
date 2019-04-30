@@ -11,7 +11,7 @@ import (
 )
 
 type resource struct {
-	Activity
+	Step
 	typ     px.ObjectType
 	handler px.TypedName
 	extId   px.Value
@@ -29,7 +29,7 @@ func (r *resource) ExtId() px.Value {
 	return r.extId
 }
 
-func Resource(c px.Context, def serviceapi.Definition) api.Activity {
+func Resource(c px.Context, def serviceapi.Definition) api.Step {
 	r := &resource{}
 	r.Init(def)
 	if eid, ok := service.GetOptionalProperty(def, `externalId`, types.DefaultStringType()); ok {
@@ -46,36 +46,36 @@ func Resource(c px.Context, def serviceapi.Definition) api.Activity {
 			}
 		}
 	}
-	r.typ = px.AssertType(func() string { return "property resourceType of activity " + def.Identifier().Name() },
+	r.typ = px.AssertType(func() string { return "property resourceType of step " + def.Identifier().Name() },
 		types.DefaultObjectType(), rt).(px.ObjectType)
 	r.handler = px.NewTypedName(px.NsHandler, r.typ.Name())
 	return r
 }
 
 func (r *resource) Identifier() string {
-	return ActivityId(r)
+	return StepId(r)
 }
 
 func (r *resource) IdParams() url.Values {
-	vs := r.Activity.IdParams()
+	vs := r.Step.IdParams()
 	vs.Add(`rt`, r.typ.Name())
 	vs.Add(`hid`, r.HandlerId().Name())
 	return vs
 }
 
-func (r *resource) Run(c px.Context, input px.OrderedMap) px.OrderedMap {
-	return service.ApplyState(c, r, input)
+func (r *resource) Run(c px.Context, parameters px.OrderedMap) px.OrderedMap {
+	return service.ApplyState(c, r, parameters)
 }
 
 func (r *resource) Label() string {
-	return ActivityLabel(r)
+	return StepLabel(r)
 }
 
 func (r *resource) Style() string {
 	return `resource`
 }
 
-func (r *resource) WithIndex(index int) api.Activity {
+func (r *resource) WithIndex(index int) api.Step {
 	rc := resource{}
 	rc = *r // Copy by value
 	rc.setIndex(index)

@@ -7,7 +7,7 @@ const (
 	LyraLinkNoMap               = `WF_LYRA_LINK_NO_MAP`
 	LyraLinkNoExe               = `WF_LYRA_LINK_NO_EXE`
 	NoSuchAttribute             = `WF_NO_SUCH_ATTRIBUTE`
-	NoActivityContext           = `WF_NO_ACTIVITY_CONTEXT`
+	NoStepContext               = `WF_NO_STEP_CONTEXT`
 	MissingRequiredProperty     = `WF_MISSING_REQUIRED_PROPERTY`
 	MultipleErrors              = `WF_MULTIPLE_ERRORS`
 	UnableToLoadRequired        = `WF_UNABLE_TO_LOAD_REQUIRED`
@@ -18,8 +18,8 @@ func init() {
 	issue.Hard(FailedToLoadPlugin, `error while loading plugin executable '%{executable}': %{message}`)
 	issue.Hard(LyraLinkNoMap, `Lyra Link did not contain a YAML map`)
 	issue.Hard(LyraLinkNoExe, `Lyra Link did not contain a valid 'executable' entry`)
-	issue.Hard2(NoSuchAttribute, `%{activity} has no attribute named '%{name}'`, issue.HF{`activity`: issue.Label})
-	issue.Hard(NoActivityContext, `no activity context was found in current scope`)
+	issue.Hard2(NoSuchAttribute, `%{step} has no attribute named '%{name}'`, issue.HF{`step`: issue.Label})
+	issue.Hard(NoStepContext, `no step context was found in current scope`)
 	issue.Hard(MissingRequiredProperty, `definition %{service} %{definition} is missing required property '%{key}'`)
 	issue.Hard2(MultipleErrors, `multiple errors: %{errors}`, issue.HF{`errors`: issue.JoinErrors})
 	issue.Hard(UnableToLoadRequired, `unable to load required %{namespace} '%{name}'`)

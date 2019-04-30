@@ -12,13 +12,13 @@ import (
 	"github.com/lyraproj/wfe/api"
 )
 
-const ActivityContextKey = `activity::context`
+const StepContextKey = `step::context`
 
-func ActivityContext(c px.Context) px.OrderedMap {
-	if ac, ok := c.Get(ActivityContextKey); ok {
-		return px.AssertInstance(`invalid activity context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
+func StepContext(c px.Context) px.OrderedMap {
+	if ac, ok := c.Get(StepContextKey); ok {
+		return px.AssertInstance(`invalid step context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
 	}
-	panic(px.Error(api.NoActivityContext, issue.NoArgs))
+	panic(px.Error(api.NoStepContext, issue.NoArgs))
 }
 
 func GetOperation(ac px.OrderedMap) wf.Operation {

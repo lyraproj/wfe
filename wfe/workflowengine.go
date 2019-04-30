@@ -22,7 +22,7 @@ import (
 )
 
 type WorkflowEngine interface {
-	Run(ctx px.Context, input px.OrderedMap) px.OrderedMap
+	Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap
 
 	BuildInvertedGraph(ctx px.Context, existsFunc func(string) bool)
 
@@ -33,8 +33,8 @@ type WorkflowEngine interface {
 	Validate()
 }
 
-type serverActivity struct {
-	api.Activity
+type serverStep struct {
+	api.Step
 	graph.Node
 	resolved chan bool
 }
@@ -48,27 +48,27 @@ func appendParameterNames(params []px.Parameter, b *bytes.Buffer) {
 	}
 }
 
-func (a *serverActivity) Attributes() []encoding.Attribute {
+func (a *serverStep) Attributes() []encoding.Attribute {
 	b := bytes.NewBufferString(`"`)
 	b.WriteString(service.LeafName(a.Name()))
 	b.WriteByte('{')
-	b.WriteString("\ninput:[")
-	appendParameterNames(a.Input(), b)
-	b.WriteString("],\noutput:[")
-	appendParameterNames(a.Output(), b)
+	b.WriteString("\nparameters:[")
+	appendParameterNames(a.Parameters(), b)
+	b.WriteString("],\nreturns:[")
+	appendParameterNames(a.Returns(), b)
 	b.WriteString(`]}"`)
 	return []encoding.Attribute{{Key: "label", Value: b.String()}}
 }
 
-func (a *serverActivity) DOTID() string {
+func (a *serverStep) DOTID() string {
 	return service.LeafName(a.Name())
 }
 
-func (a *serverActivity) SetResolved() {
+func (a *serverStep) SetResolved() {
 	close(a.resolved)
 }
 
-func (a *serverActivity) Resolved() <-chan bool {
+func (a *serverStep) Resolved() <-chan bool {
 	return a.resolved
 }
 
@@ -78,7 +78,7 @@ type workflowEngine struct {
 	valuesLock   sync.RWMutex
 	runLatch     map[int64]bool
 	values       map[string]px.Value
-	inbox        chan *serverActivity
+	inbox        chan *serverStep
 	jobCounter   int32
 	done         chan bool
 	graph        *simple.DirectedGraph
@@ -90,27 +90,27 @@ func NewWorkflowEngine(workflow api.Workflow) WorkflowEngine {
 		Workflow: workflow,
 		runLatch: make(map[int64]bool),
 		graph:    simple.NewDirectedGraph(),
-		inbox:    make(chan *serverActivity, 20),
+		inbox:    make(chan *serverStep, 20),
 		done:     make(chan bool)}
 
-	for _, a := range workflow.Activities() {
-		as.addActivity(a)
+	for _, a := range workflow.Steps() {
+		as.addStep(a)
 	}
 	return as
 }
 
-func (s *workflowEngine) addActivity(na api.Activity) {
-	// Check that no other activity is a producer of the same values
+func (s *workflowEngine) addStep(na api.Step) {
+	// Check that no other step is a producer of the same values
 	ni := s.graph.Nodes()
 	if ni != nil {
 		for ni.Next() {
-			a := ni.Node().(api.Activity)
+			a := ni.Node().(api.Step)
 			if a.Name() == na.Name() {
 				panic(px.Error(AlreadyDefined, issue.H{`name`: na.Name()}))
 			}
 		}
 	}
-	a := &serverActivity{Activity: na, Node: s.graph.NewNode(), resolved: make(chan bool)}
+	a := &serverStep{Step: na, Node: s.graph.NewNode(), resolved: make(chan bool)}
 	s.graph.AddNode(a)
 }
 
@@ -139,19 +139,19 @@ func (s *workflowEngine) BuildInvertedGraph(c px.Context, existsFunc func(string
 		g.RemoveEdge(e.From().ID(), e.To().ID())
 	}
 
-	// Add workflow as the producer of input with values.
+	// Add workflow as the producer of parameters with values.
 	vp := make(valueProducers, ni.Len()*5)
-	vp.add(s, s.Input())
+	vp.add(s, s.Parameters())
 	for ni.Next() {
-		fa := ni.Node().(*serverActivity)
+		fa := ni.Node().(*serverStep)
 		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
-			vp.add(fa, fa.Output())
+			vp.add(fa, fa.Returns())
 		}
 	}
 
 	ni.Reset()
 	for ni.Next() {
-		fa := ni.Node().(*serverActivity)
+		fa := ni.Node().(*serverStep)
 		if fa.When() == wf.Always || existsFunc(fa.Identifier()) {
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
@@ -171,7 +171,7 @@ func (s *workflowEngine) Validate() {
 	}
 
 	for ni.Next() {
-		for _, g := range ni.Node().(*serverActivity).When().Names() {
+		for _, g := range ni.Node().(*serverStep).When().Names() {
 			guards[g] = false
 		}
 	}
@@ -180,7 +180,7 @@ func (s *workflowEngine) Validate() {
 	if gc > 0 {
 		maxVariations := int(math.Pow(2.0, float64(gc)))
 		if gc > maxGuards {
-			panic(px.Error(TooManyGuards, issue.H{`activity`: s, `max`: maxGuards, `count`: gc}))
+			panic(px.Error(TooManyGuards, issue.H{`step`: s, `max`: maxGuards, `count`: gc}))
 		}
 
 		guardNames := make([]string, 0, gc)
@@ -189,7 +189,7 @@ func (s *workflowEngine) Validate() {
 		}
 		sort.Strings(guardNames)
 
-		// Check all variations for validity with respect to input and output
+		// Check all variations for validity with respect to parameters and returns
 		for bitmap := 0; bitmap <= maxVariations; bitmap++ {
 			es := make([]*types.HashEntry, gc)
 			for i := uint(0); i < gc; i++ {
@@ -197,21 +197,21 @@ func (s *workflowEngine) Validate() {
 			}
 			guardCombo := types.WrapHash(es)
 
-			// Add workflow as the producer of input with values.
+			// Add workflow as the producer of parameters with values.
 			ni.Reset()
 			vp := make(valueProducers, ni.Len()*5)
-			vp.add(s, s.Input())
+			vp.add(s, s.Parameters())
 
 			for ni.Next() {
-				fa := ni.Node().(*serverActivity)
+				fa := ni.Node().(*serverStep)
 				if fa.When().IsTrue(guardCombo) {
-					vp.add(fa, fa.Output())
+					vp.add(fa, fa.Returns())
 				}
 			}
 
 			ni.Reset()
 			for ni.Next() {
-				vp.validateInput(ni.Node().(*serverActivity))
+				vp.validateParameters(ni.Node().(*serverStep))
 			}
 			vp.validate(s)
 		}
@@ -219,33 +219,33 @@ func (s *workflowEngine) Validate() {
 		// Build the final graph that doesn't care about guards or multiple producers of a value
 		ni.Reset()
 		vp := make(valueProducers, ni.Len()*5)
-		vp.add(s, s.Input())
+		vp.add(s, s.Parameters())
 		for ni.Next() {
-			fa := ni.Node().(*serverActivity)
-			vp.add(fa, fa.Output())
+			fa := ni.Node().(*serverStep)
+			vp.add(fa, fa.Returns())
 		}
 
 		ni.Reset()
 		for ni.Next() {
-			fa := ni.Node().(*serverActivity)
+			fa := ni.Node().(*serverStep)
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), fa))
 			}
 		}
 	} else {
-		// Add workflow as the producer of input with values.
+		// Add workflow as the producer of parameters with values.
 		ni.Reset()
 		vp := make(valueProducers, ni.Len()*5)
-		vp.add(s, s.Input())
+		vp.add(s, s.Parameters())
 		for ni.Next() {
-			fa := ni.Node().(*serverActivity)
-			vp.add(fa, fa.Output())
+			fa := ni.Node().(*serverStep)
+			vp.add(fa, fa.Returns())
 		}
 
 		ni.Reset()
 		for ni.Next() {
-			fa := ni.Node().(*serverActivity)
+			fa := ni.Node().(*serverStep)
 			ds := s.dependents(fa, vp)
 			for _, dep := range ds {
 				s.graph.SetEdge(s.graph.NewEdge(dep.(graph.Node), fa))
@@ -255,53 +255,53 @@ func (s *workflowEngine) Validate() {
 	}
 }
 
-type valueProducers map[string][]api.Activity
+type valueProducers map[string][]api.Step
 
-func (vp valueProducers) add(a api.Activity, ps []px.Parameter) {
+func (vp valueProducers) add(a api.Step, ps []px.Parameter) {
 	for _, param := range ps {
 		n := param.Name()
 		v := vp[n]
 		if v == nil {
-			vp[n] = []api.Activity{a}
+			vp[n] = []api.Step{a}
 		} else {
 			vp[n] = append(v, a)
 		}
 	}
 }
 
-func (vp valueProducers) validate(a api.Activity) {
+func (vp valueProducers) validate(a api.Step) {
 	for k, v := range vp {
 		if len(v) > 1 {
-			panic(px.Error(MultipleProducersOfValue, issue.H{`activity1`: v[0], `activity2`: v[1], `value`: k}))
+			panic(px.Error(MultipleProducersOfValue, issue.H{`step1`: v[0], `step2`: v[1], `value`: k}))
 		}
 	}
-	for _, param := range a.Output() {
+	for _, param := range a.Returns() {
 		if _, found := vp[param.Name()]; found {
 			continue
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: param.Name()}))
+		panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: param.Name()}))
 	}
 }
 
-func (vp valueProducers) validateInput(a api.Activity) {
+func (vp valueProducers) validateParameters(a api.Step) {
 	var checkDep = func(name string) {
 		if _, found := vp[name]; !found {
-			panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
+			panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: name}))
 		}
 	}
 	for _, name := range a.When().Names() {
 		checkDep(name)
 	}
-	for _, param := range a.Input() {
+	for _, param := range a.Parameters() {
 		if !param.HasValue() {
 			checkDep(param.Name())
 		}
 	}
 }
 
-func (s *workflowEngine) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	s.values = make(map[string]px.Value, 37)
-	input.EachPair(func(k, v px.Value) {
+	parameters.EachPair(func(k, v px.Value) {
 		s.values[k.String()] = v
 	})
 
@@ -311,17 +311,17 @@ func (s *workflowEngine) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap 
 		return nil
 	}
 
-	for _, param := range s.Workflow.Input() {
+	for _, param := range s.Workflow.Parameters() {
 		s.values[param.Name()] = s.resolveParameter(ctx, s.Workflow, param)
 	}
 
 	for w := 1; w <= 5; w++ {
-		px.Fork(ctx, func(cf px.Context) { s.activityWorker(cf, w) })
+		px.Fork(ctx, func(cf px.Context) { s.stepWorker(cf, w) })
 	}
 	for ni.Next() {
 		n := ni.Node()
 		if s.graph.To(n.ID()).Len() == 0 {
-			s.scheduleActivity(n.(*serverActivity))
+			s.scheduleStep(n.(*serverStep))
 		}
 	}
 	<-s.done
@@ -336,8 +336,8 @@ func (s *workflowEngine) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap 
 		panic(err)
 	}
 
-	entries := make([]*types.HashEntry, len(s.Output()))
-	for i, out := range s.Output() {
+	entries := make([]*types.HashEntry, len(s.Returns()))
+	for i, out := range s.Returns() {
 		n := out.Name()
 		entries[i] = types.WrapHashEntry2(n, s.values[n])
 	}
@@ -355,9 +355,9 @@ func (s *workflowEngine) DumpVariables() {
 	}
 }
 
-func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Activity {
+func (s *workflowEngine) dependents(a api.Step, vp valueProducers) []api.Step {
 
-	dam := make(map[string]api.Activity)
+	dam := make(map[string]api.Step)
 	var addDeps = func(name string) {
 		if ds, found := vp[name]; found {
 			for _, d := range ds {
@@ -367,44 +367,44 @@ func (s *workflowEngine) dependents(a api.Activity, vp valueProducers) []api.Act
 			}
 			return
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`activity`: a, `value`: name}))
+		panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: name}))
 	}
 
 nextName:
 	for _, name := range a.When().Names() {
-		for _, param := range a.Input() {
+		for _, param := range a.Parameters() {
 			if name == param.Name() {
 				continue nextName
 			}
 		}
 		addDeps(name)
 	}
-	for _, param := range a.Input() {
+	for _, param := range a.Parameters() {
 		if !param.HasValue() {
 			addDeps(param.Name())
 		}
 	}
 
-	da := make([]api.Activity, 0, len(dam))
+	da := make([]api.Step, 0, len(dam))
 	for _, vp := range dam {
 		da = append(da, vp)
 	}
 
-	// Ensure that activities are sorted by name
+	// Ensure that steps are sorted by name
 	sort.Slice(da, func(i, j int) bool {
 		return da[i].Name() < da[j].Name()
 	})
 	return da
 }
 
-// This function represents a worker that spawns activities
-func (s *workflowEngine) activityWorker(ctx px.Context, id int) {
+// This function represents a worker that spawns steps
+func (s *workflowEngine) stepWorker(ctx px.Context, id int) {
 	for a := range s.inbox {
-		s.runActivity(ctx, a)
+		s.runStep(ctx, a)
 	}
 }
 
-func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
+func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -443,7 +443,7 @@ func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
 
 	s.waitForEdgesTo(a)
 
-	params := a.Input()
+	params := a.Parameters()
 	entries := make([]*types.HashEntry, len(params))
 	for i, param := range params {
 		entries[i] = types.WrapHashEntry2(param.Name(), s.resolveParameter(ctx, a, param))
@@ -460,16 +460,16 @@ func (s *workflowEngine) runActivity(ctx px.Context, a *serverActivity) {
 	}
 	a.SetResolved()
 
-	// Schedule all activities that are dependent on this activity. Since a node can be
-	// dependent on several activities, it might be scheduled several times. It will
+	// Schedule all steps that are dependent on this step. Since a node can be
+	// dependent on several steps, it might be scheduled several times. It will
 	// however only run once. This is controlled by the runLatch.
 	ni := s.graph.From(a.ID())
 	for ni.Next() {
-		s.scheduleActivity(ni.Node().(*serverActivity))
+		s.scheduleStep(ni.Node().(*serverStep))
 	}
 }
 
-func (s *workflowEngine) resolveParameter(ctx px.Context, activity api.Activity, param px.Parameter) px.Value {
+func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param px.Parameter) px.Value {
 	n := param.Name()
 	if !param.HasValue() {
 		s.valuesLock.RLock()
@@ -478,21 +478,21 @@ func (s *workflowEngine) resolveParameter(ctx px.Context, activity api.Activity,
 		if ok {
 			return v
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`activity`: activity, `value`: n}))
+		panic(px.Error(NoProducerOfValue, issue.H{`step`: step, `value`: n}))
 	}
 	return types.ResolveDeferred(ctx, param.Value(), ctx.Scope())
 }
 
 // Ensure that all nodes that has an edge to this node have been
 // fully resolved.
-func (s *workflowEngine) waitForEdgesTo(a *serverActivity) {
+func (s *workflowEngine) waitForEdgesTo(a *serverStep) {
 	parents := s.graph.To(a.ID())
 	for parents.Next() {
-		<-parents.Node().(*serverActivity).Resolved()
+		<-parents.Node().(*serverStep).Resolved()
 	}
 }
 
-func (s *workflowEngine) scheduleActivity(a *serverActivity) {
+func (s *workflowEngine) scheduleStep(a *serverStep) {
 	atomic.AddInt32(&s.jobCounter, 1)
 	s.inbox <- a
 }

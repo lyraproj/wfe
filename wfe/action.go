@@ -8,7 +8,7 @@ import (
 )
 
 type action struct {
-	Activity
+	Step
 	api px.ObjectType
 }
 
@@ -18,23 +18,23 @@ var expectedType = types.NewCallableType(
 	types.NewTupleType([]px.Type{ioType}, nil), ioType, nil)
 */
 
-func Action(def serviceapi.Definition) api.Activity {
+func Action(def serviceapi.Definition) api.Step {
 	a := &action{}
 	a.Init(def)
 	return a
 }
 
 func (s *action) Init(d serviceapi.Definition) {
-	s.Activity.Init(d)
+	s.Step.Init(d)
 	if i, ok := d.Properties().Get4(`interface`); ok {
 		s.api = i.(px.ObjectType)
 	}
 }
 
-func (s *action) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+func (s *action) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	service := s.GetService(ctx)
 	hclog.Default().Debug(`executing action`, `name`, s.name)
-	result := service.Invoke(ctx, s.Name(), `do`, input)
+	result := service.Invoke(ctx, s.Name(), `do`, parameters)
 	if m, ok := result.(px.OrderedMap); ok {
 		return m
 	}
@@ -42,18 +42,18 @@ func (s *action) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
 }
 
 func (s *action) Label() string {
-	return ActivityLabel(s)
+	return StepLabel(s)
 }
 
 func (a *action) Identifier() string {
-	return ActivityId(a)
+	return StepId(a)
 }
 
 func (s *action) Style() string {
 	return `action`
 }
 
-func (a *action) WithIndex(index int) api.Activity {
+func (a *action) WithIndex(index int) api.Step {
 	ac := action{}
 	ac = *a // Copy by value
 	ac.setIndex(index)

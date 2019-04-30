@@ -47,8 +47,8 @@ func SweepAndGC(c px.Context, prefix string) {
 	}
 }
 
-func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.OrderedMap {
-	ac := ActivityContext(c)
+func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) px.OrderedMap {
+	ac := StepContext(c)
 	op := GetOperation(ac)
 
 	log := hclog.Default()
@@ -85,7 +85,7 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 			break
 		}
 
-		desiredState := GetService(c, resource.ServiceId()).State(c, resource.Name(), input)
+		desiredState := GetService(c, resource.ServiceId()).State(c, resource.Name(), parameters)
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
 			log.Debug("Create state", "intId", intId)
@@ -141,9 +141,9 @@ func ApplyState(c px.Context, resource api.Resource, input px.OrderedMap) px.Ord
 
 	switch op {
 	case wf.Read, wf.Upsert:
-		output := resource.Output()
-		entries := make([]*types.HashEntry, len(output))
-		for i, o := range output {
+		returns := resource.Returns()
+		entries := make([]*types.HashEntry, len(returns))
+		for i, o := range returns {
 			entries[i] = getValue(o, resource, result)
 		}
 		return types.WrapHash(entries)
@@ -164,7 +164,7 @@ func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntr
 				if v, ok := o.Get(a); ok {
 					entries[i] = types.WrapHashEntry(e, v)
 				} else {
-					panic(px.Error(api.NoSuchAttribute, issue.H{`activity`: r, `name`: a}))
+					panic(px.Error(api.NoSuchAttribute, issue.H{`step`: r, `name`: a}))
 				}
 			})
 			return types.WrapHashEntry2(n, types.WrapHash(entries))
@@ -177,5 +177,5 @@ func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntr
 	if v, ok := o.Get(a); ok {
 		return types.WrapHashEntry2(n, v)
 	}
-	panic(px.Error(api.NoSuchAttribute, issue.H{`activity`: r, `name`: a}))
+	panic(px.Error(api.NoSuchAttribute, issue.H{`step`: r, `name`: a}))
 }
