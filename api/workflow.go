@@ -1,7 +1,7 @@
 package api
 
 type Workflow interface {
-	Activity
+	Step
 
-	Activities() []Activity
+	Steps() []Step
 }

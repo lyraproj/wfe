@@ -3,7 +3,7 @@ package api
 import "github.com/lyraproj/pcore/px"
 
 type Resource interface {
-	Activity
+	Step
 
 	Type() px.ObjectType
 

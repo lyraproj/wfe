@@ -9,32 +9,32 @@ import (
 )
 
 type workflow struct {
-	Activity
+	Step
 
-	activities []api.Activity
+	steps []api.Step
 }
 
 var DefinitionListType = types.NewArrayType(serviceapi.DefinitionMetaType, nil)
 
-func (w *workflow) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+func (w *workflow) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	wf := NewWorkflowEngine(w)
 	wf.Validate()
-	return wf.Run(ctx, input)
+	return wf.Run(ctx, parameters)
 }
 
 func (w *workflow) Identifier() string {
-	return ActivityId(w)
+	return StepId(w)
 }
 
 func (w *workflow) Label() string {
-	return ActivityLabel(w)
+	return StepLabel(w)
 }
 
 func (w *workflow) Style() string {
 	return `workflow`
 }
 
-func (w *workflow) WithIndex(index int) api.Activity {
+func (w *workflow) WithIndex(index int) api.Step {
 	wc := workflow{}
 	wc = *w // Copy by value
 	wc.setIndex(index)
@@ -44,13 +44,13 @@ func (w *workflow) WithIndex(index int) api.Activity {
 func Workflow(c px.Context, def serviceapi.Definition) api.Workflow {
 	wf := &workflow{}
 	wf.Init(def)
-	activities := service.GetProperty(def, `activities`, DefinitionListType).(px.List)
-	as := make([]api.Activity, activities.Len())
-	activities.EachWithIndex(func(v px.Value, i int) { as[i] = CreateActivity(c, v.(serviceapi.Definition)) })
-	wf.activities = as
+	steps := service.GetProperty(def, `steps`, DefinitionListType).(px.List)
+	as := make([]api.Step, steps.Len())
+	steps.EachWithIndex(func(v px.Value, i int) { as[i] = CreateStep(c, v.(serviceapi.Definition)) })
+	wf.steps = as
 	return wf
 }
 
-func (w *workflow) Activities() []api.Activity {
-	return w.activities
+func (w *workflow) Steps() []api.Step {
+	return w.steps
 }

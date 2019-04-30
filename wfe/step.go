@@ -17,17 +17,17 @@ import (
 	"github.com/lyraproj/wfe/service"
 )
 
-type Activity struct {
-	serviceId px.TypedName
-	name      string
-	when      wf.Condition
-	input     []px.Parameter
-	output    []px.Parameter
-	index     int
+type Step struct {
+	serviceId  px.TypedName
+	name       string
+	when       wf.Condition
+	parameters []px.Parameter
+	returns    []px.Parameter
+	index      int
 }
 
-func CreateActivity(c px.Context, def serviceapi.Definition) api.Activity {
-	hclog.Default().Debug(`creating activity`, `style`, service.GetStringProperty(def, `style`))
+func CreateStep(c px.Context, def serviceapi.Definition) api.Step {
+	hclog.Default().Debug(`creating step`, `style`, service.GetStringProperty(def, `style`))
 
 	switch service.GetStringProperty(def, `style`) {
 	case `stateHandler`:
@@ -44,19 +44,19 @@ func CreateActivity(c px.Context, def serviceapi.Definition) api.Activity {
 	return nil
 }
 
-func (a *Activity) GetService(c px.Context) serviceapi.Service {
+func (a *Step) GetService(c px.Context) serviceapi.Service {
 	return service.GetService(c, a.serviceId)
 }
 
-func (a *Activity) ServiceId() px.TypedName {
+func (a *Step) ServiceId() px.TypedName {
 	return a.serviceId
 }
 
-func ActivityLabel(a api.Activity) string {
+func StepLabel(a api.Step) string {
 	return fmt.Sprintf(`%s '%s'`, a.Style(), a.Name())
 }
 
-func ActivityId(a api.Activity) string {
+func StepId(a api.Step) string {
 	b := bytes.NewBufferString(`lyra://puppet.com`)
 	for _, s := range strings.Split(a.Name(), `::`) {
 		b.WriteByte('/')
@@ -70,29 +70,29 @@ func ActivityId(a api.Activity) string {
 	return b.String()
 }
 
-func (a *Activity) When() wf.Condition {
+func (a *Step) When() wf.Condition {
 	return a.when
 }
 
-func (a *Activity) Name() string {
+func (a *Step) Name() string {
 	return a.name
 }
 
-func (a *Activity) Input() []px.Parameter {
-	return a.input
+func (a *Step) Parameters() []px.Parameter {
+	return a.parameters
 }
 
-func (a *Activity) Output() []px.Parameter {
-	return a.output
+func (a *Step) Returns() []px.Parameter {
+	return a.returns
 }
 
-func (a *Activity) Init(def serviceapi.Definition) {
+func (a *Step) Init(def serviceapi.Definition) {
 	a.index = -1
 	a.serviceId = def.ServiceId()
 	a.name = def.Identifier().Name()
 	props := def.Properties()
-	a.input = getParameters(`input`, props)
-	a.output = getParameters(`output`, props)
+	a.parameters = getParameters(`parameters`, props)
+	a.returns = getParameters(`returns`, props)
 	if wh, ok := props.Get4(`when`); ok {
 		a.when = wh.(wf.Condition)
 	} else {
@@ -101,8 +101,8 @@ func (a *Activity) Init(def serviceapi.Definition) {
 }
 
 func getParameters(key string, props px.OrderedMap) []px.Parameter {
-	if input, ok := props.Get4(key); ok {
-		ia := input.(px.List)
+	if parameters, ok := props.Get4(key); ok {
+		ia := parameters.(px.List)
 		is := make([]px.Parameter, ia.Len())
 		ia.EachWithIndex(func(iv px.Value, idx int) { is[idx] = iv.(px.Parameter) })
 		return is
@@ -110,24 +110,24 @@ func getParameters(key string, props px.OrderedMap) []px.Parameter {
 	return []px.Parameter{}
 }
 
-func (a *Activity) IdParams() url.Values {
+func (a *Step) IdParams() url.Values {
 	if a.index >= 0 {
 		return url.Values{`index`: {strconv.Itoa(a.index)}}
 	}
 	return url.Values{}
 }
 
-func ResolveInput(ctx px.Context, a api.Activity, input px.OrderedMap, p px.Parameter) px.Value {
+func ResolveParameters(ctx px.Context, a api.Step, parameters px.OrderedMap, p px.Parameter) px.Value {
 	if !p.HasValue() {
-		if v, ok := input.Get4(p.Name()); ok {
+		if v, ok := parameters.Get4(p.Name()); ok {
 			return v
 		}
-		panic(px.Error(ParameterUnresolved, issue.H{`activity`: a, `parameter`: p.Name()}))
+		panic(px.Error(ParameterUnresolved, issue.H{`step`: a, `parameter`: p.Name()}))
 	}
-	return types.ResolveDeferred(ctx, p.Value(), input)
+	return types.ResolveDeferred(ctx, p.Value(), parameters)
 }
 
 // setIndex must only be called after a direct cloning operation on the instance, i.e. from WithIndex()
-func (a *Activity) setIndex(index int) {
+func (a *Step) setIndex(index int) {
 	a.index = index
 }
