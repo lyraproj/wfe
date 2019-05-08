@@ -32,6 +32,8 @@ github.com/lyraproj/servicesdk v0.0.0-20190430133733-68a5a13f9111/go.mod h1:EmDP
 github.com/lyraproj/servicesdk v0.0.0-20190507133311-974f5eac5047 h1:d4M4hks22aoBQFksLf0JxphUftza917OJ2c9AYlp/5M=
 github.com/lyraproj/servicesdk v0.0.0-20190507143352-f65d30892e58 h1:3YPc4x0hy0wnecq2VqIzRb28Kzx5AGiB7UPKRN/I32g=
 github.com/lyraproj/servicesdk v0.0.0-20190507143352-f65d30892e58/go.mod h1:mAgzNVtNRt2DltU6NACk6bGvKyoEwcbgfhuQWkIYoIU=
+github.com/lyraproj/servicesdk v0.0.0-20190508115933-24429e2bf3c6 h1:MHh1V9kYJswZxJp5yyEhzLuTntnIP5Y8buP/jqHhnZg=
+github.com/lyraproj/servicesdk v0.0.0-20190508115933-24429e2bf3c6/go.mod h1:mAgzNVtNRt2DltU6NACk6bGvKyoEwcbgfhuQWkIYoIU=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
