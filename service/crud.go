@@ -6,6 +6,9 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/annotation"
+	"github.com/lyraproj/servicesdk/grpc"
+	"github.com/lyraproj/servicesdk/service"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 )
@@ -47,6 +50,24 @@ func SweepAndGC(c px.Context, prefix string) {
 	}
 }
 
+func readOrNotFound(c px.Context, handler serviceapi.Service, hn string, extId px.Value, identity *identity) px.Value {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(issue.Reported); ok && e.Code() == grpc.InvocationError {
+				if e.Argument(`code`) == service.NotFound {
+					// Not found by remote. Purge the extId and return nil.
+					hclog.Default().Debug("Removing obsolete extId from Identity service", "extId", extId)
+					identity.purgeExternal(c, extId)
+					return
+				}
+			}
+			panic(r)
+		}
+	}()
+
+	hclog.Default().Debug("Read state", "extId", extId)
+	return handler.Invoke(c, hn, `read`, extId)
+}
 func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) px.OrderedMap {
 	ac := StepContext(c)
 	op := GetOperation(ac)
@@ -73,19 +94,37 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 		if extId == nil {
 			return px.EmptyMap
 		}
-		log.Debug("Read state", "extId", extId)
-		result = px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
+		rt := readOrNotFound(c, handler, hn, extId, identity)
+		if rt == nil {
+			return px.EmptyMap
+		}
+		result = px.AssertInstance(handlerDef.Label, resource.Type(), rt).(px.PuppetObject)
 
 	case wf.Upsert:
 		if explicitExtId {
 			// An explicit externalId is for resources not managed by us. Only possible action
 			// here is a read
-			log.Debug("Read state", "extId", extId)
-			result = handler.Invoke(c, hn, `read`, extId).(px.PuppetObject)
+			rt := readOrNotFound(c, handler, hn, extId, identity)
+			if rt == nil {
+				// False positive from the Identity service
+				return px.EmptyMap
+			}
+			result = px.AssertInstance(handlerDef.Label, resource.Type(), rt).(px.PuppetObject)
 			break
 		}
 
 		desiredState := GetService(c, resource.ServiceId()).State(c, resource.Name(), parameters)
+		if extId != nil {
+			// Read current state and check if an update is needed
+			rt := readOrNotFound(c, handler, hn, extId, identity)
+			if rt == nil {
+				// False positive from the Identity service
+				extId = nil
+			} else {
+				result = px.AssertInstance(handlerDef.Label, resource.Type(), rt).(px.PuppetObject)
+			}
+		}
+
 		if extId == nil {
 			// Nothing exists yet. Create a new instance
 			log.Debug("Create state", "intId", intId)
@@ -97,16 +136,12 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 			break
 		}
 
-		// Read current state and check if an update is needed
 		var updateNeeded, recreateNeeded bool
-		log.Debug("Read state", "extId", extId)
-		currentState := px.AssertInstance(handlerDef.Label, resource.Type(), handler.Invoke(c, hn, `read`, extId)).(px.PuppetObject)
-
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
 			ra := a.(annotation.Resource)
-			updateNeeded, recreateNeeded = ra.Changed(desiredState, currentState)
+			updateNeeded, recreateNeeded = ra.Changed(desiredState, result)
 		} else {
-			updateNeeded = !desiredState.Equals(currentState, nil)
+			updateNeeded = !desiredState.Equals(result, nil)
 			recreateNeeded = false
 		}
 
@@ -132,8 +167,6 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 			extId = rl.At(1)
 			log.Debug("Associate state", "intId", intId, "extId", extId)
 			identity.associate(c, intId, extId)
-		} else {
-			result = currentState
 		}
 	default:
 		panic(px.Error(wf.IllegalOperation, issue.H{`operation`: op}))
