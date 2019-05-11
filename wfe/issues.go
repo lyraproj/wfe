@@ -5,6 +5,7 @@ import "github.com/lyraproj/issue/issue"
 const (
 	GraphDotMarshal                = `WF_GRAPH_DOT_MARSHAL`
 	AlreadyDefined                 = `WF_ALREADY_DEFINED`
+	ExpectedValueNotProduced       = `WF_EXPECTED_VALUE_NOT_PRODUCED`
 	MultipleProducersOfValue       = `WF_MULTIPLE_PRODUCERS_OF_VALUE`
 	NoProducerOfValue              = `WF_NO_PRODUCER_OF_VALUE`
 	IterationStepWrongParameters   = `WF_ITERATION_STEP_WRONG_PARAMETERS`
@@ -19,6 +20,7 @@ const (
 func init() {
 	issue.Hard(GraphDotMarshal, `error while marshalling graph to dot: %{detail}`)
 	issue.Hard2(AlreadyDefined, `%{step} is already defined`, issue.HF{`step`: issue.Label})
+	issue.Hard2(ExpectedValueNotProduced, `%{step} did not produce return value '%{value}'`, issue.HF{`step`: issue.Label})
 	issue.Hard2(MultipleProducersOfValue, `both %{step1} and %{step2} returns the value '%{value}'`, issue.HF{`step1`: issue.Label, `step2`: issue.Label})
 	issue.Hard2(NoProducerOfValue, `%{step} value '%{value}' is never produced`, issue.HF{`step`: issue.Label})
 	issue.Hard2(IterationStepWrongParameters, `%{iterator} parameters must consume returns produced by the iterator`, issue.HF{`iterator`: issue.Label})
