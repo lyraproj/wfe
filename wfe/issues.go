@@ -14,6 +14,7 @@ const (
 	IterationParameterWrongType    = `WF_ITERATION_PARAMETER_WRONG_TYPE`
 	IterationVariableInvalidCount  = `WF_ITERATION_VARIABLE_INVALID_COUNT`
 	ParameterUnresolved            = `WF_PARAMETER_UNRESOLVED`
+	StepExecutionError             = `WF_STEP_EXECUTION_ERROR`
 	TooManyGuards                  = `WF_TOO_MANY_GUARDS`
 )
 
@@ -31,4 +32,5 @@ func init() {
 	issue.Hard2(IterationVariableInvalidCount, `%{iterator}, wrong number of variables. Expected %{expected}, actual %{actual}`, issue.HF{`iterator`: issue.Label})
 	issue.Hard2(TooManyGuards, `%{step} is too complex. Expected %{max} guards maximum. Have %{actual}`, issue.HF{`step`: issue.Label})
 	issue.Hard2(ParameterUnresolved, `%{step}, parameter %{parameter} cannot be resolved`, issue.HF{`step`: issue.Label})
+	issue.Hard2(StepExecutionError, `error while executing %{step}`, issue.HF{`step`: issue.Label})
 }

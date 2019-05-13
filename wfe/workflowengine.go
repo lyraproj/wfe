@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"regexp"
 	"sort"
 	"strconv"
 	"sync"
@@ -449,20 +450,49 @@ func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 	}
 }
 
+var hasLocationPattern = regexp.MustCompile(`[^\w]file:\s+|[^\w]line:\s+`)
+
 func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns map[string]px.Value) {
 	defer func() {
 		r := recover()
 		if r != nil {
 			var err error
+			var loc issue.Location
+			if orig := s.Origin(); orig != `` {
+				loc = issue.ParseLocation(orig)
+			}
 			switch r := r.(type) {
+			case issue.Reported:
+				if loc != nil {
+					r = r.WithLocation(loc)
+				}
+				err = r
 			case error:
+				if loc := s.Origin(); loc != `` {
+					es := r.Error()
+					if !hasLocationPattern.MatchString(es) {
+						r = fmt.Errorf(`%s %s`, es, loc)
+					}
+				}
 				err = r
 			case string:
-				err = errors.New(r)
+				if loc := s.Origin(); loc != `` {
+					err = fmt.Errorf(`%s %s`, r, loc)
+				} else {
+					err = errors.New(r)
+				}
 			case fmt.Stringer:
-				err = errors.New(r.String())
+				if loc := s.Origin(); loc != `` {
+					err = fmt.Errorf(`%s %s`, r.String(), loc)
+				} else {
+					err = errors.New(r.String())
+				}
 			default:
 				err = fmt.Errorf("%v", r)
+			}
+			if _, ok := err.(issue.Reported); !ok {
+				// Wrap in a step execution error so that step is revealed
+				err = issue.NewNested(StepExecutionError, issue.H{`step`: a}, loc, err)
 			}
 			s.runLatchLock.Lock()
 			if s.errors == nil {
