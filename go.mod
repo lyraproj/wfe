@@ -7,3 +7,5 @@ require (
 	github.com/lyraproj/servicesdk v0.0.0-20190513111104-a5b399ba7e1d
 	gonum.org/v1/gonum v0.0.0-20190331200053-3d26580ed485
 )
+
+replace github.com/lyraproj/servicesdk => github.com/thallgren/servicesdk v0.0.0-20190513140042-a5b6688bf356

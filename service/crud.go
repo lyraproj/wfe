@@ -139,7 +139,7 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 		var updateNeeded, recreateNeeded bool
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
 			ra := a.(annotation.Resource)
-			updateNeeded, recreateNeeded = ra.Changed(desiredState, result)
+			updateNeeded, recreateNeeded = ra.Changed(c, desiredState, result)
 		} else {
 			updateNeeded = !desiredState.Equals(result, nil)
 			recreateNeeded = false
