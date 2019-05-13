@@ -25,6 +25,9 @@ type Step interface {
 	// IdParams returns optional URL parameter values that becomes part of the Identifier
 	IdParams() url.Values
 
+	// The origin of the step. Typically a file name with optional line number information
+	Origin() string
+
 	// The Id of the service that provides this step
 	ServiceId() px.TypedName
 

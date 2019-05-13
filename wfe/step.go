@@ -20,6 +20,7 @@ import (
 type Step struct {
 	serviceId  px.TypedName
 	name       string
+	origin     string
 	when       wf.Condition
 	parameters []px.Parameter
 	returns    []px.Parameter
@@ -48,6 +49,10 @@ func CreateStep(c px.Context, def serviceapi.Definition) api.Step {
 
 func (a *Step) GetService(c px.Context) serviceapi.Service {
 	return service.GetService(c, a.serviceId)
+}
+
+func (a *Step) Origin() string {
+	return a.origin
 }
 
 func (a *Step) ServiceId() px.TypedName {
@@ -93,6 +98,9 @@ func (a *Step) Init(def serviceapi.Definition) {
 	a.serviceId = def.ServiceId()
 	a.name = def.Identifier().Name()
 	props := def.Properties()
+	if o, ok := props.Get4(`origin`); ok {
+		a.origin = o.String()
+	}
 	a.parameters = getParameters(`parameters`, props)
 	a.returns = getParameters(`returns`, props)
 	if wh, ok := props.Get4(`when`); ok {

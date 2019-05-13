@@ -5,9 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
+	"regexp"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
@@ -336,10 +341,12 @@ func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.Ordere
 		panic(err)
 	}
 
-	entries := make([]*types.HashEntry, len(s.Returns()))
-	for i, out := range s.Returns() {
+	entries := make([]*types.HashEntry, 0, len(s.Returns()))
+	for _, out := range s.Returns() {
 		n := out.Name()
-		entries[i] = types.WrapHashEntry2(n, s.values[n])
+		if v, ok := s.values[n]; ok {
+			entries = append(entries, types.WrapHashEntry2(n, v))
+		}
 	}
 	return types.WrapHash(entries)
 }
@@ -404,29 +411,12 @@ func (s *workflowEngine) stepWorker(ctx px.Context, id int) {
 	}
 }
 
+// This value should never be made visible. It's only purpose is to prevent
+// execution of steps that detects it on input
+var unresolvedValue = types.WrapString(`unresolved_` + strconv.Itoa(rand.Int()))
+
 func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 	defer func() {
-		r := recover()
-		if r != nil {
-			var err error
-			switch r := r.(type) {
-			case error:
-				err = r
-			case string:
-				err = errors.New(r)
-			case fmt.Stringer:
-				err = errors.New(r.String())
-			default:
-				err = fmt.Errorf("%v", r)
-			}
-			s.runLatchLock.Lock()
-			if s.errors == nil {
-				s.errors = []error{err}
-			} else {
-				s.errors = append(s.errors, err)
-			}
-			s.runLatchLock.Unlock()
-		}
 		if atomic.AddInt32(&s.jobCounter, -1) <= 0 {
 			close(s.inbox)
 			close(s.done)
@@ -434,30 +424,21 @@ func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 	}()
 
 	s.runLatchLock.Lock()
-	if s.errors != nil || s.runLatch[a.ID()] {
+	if s.runLatch[a.ID()] {
 		s.runLatchLock.Unlock()
 		return
 	}
 	s.runLatch[a.ID()] = true
 	s.runLatchLock.Unlock()
 
-	s.waitForEdgesTo(a)
+	result := s.runStepCatch(ctx, a)
 
-	params := a.Parameters()
-	entries := make([]*types.HashEntry, len(params))
-	for i, param := range params {
-		entries[i] = types.WrapHashEntry2(param.Name(), s.resolveParameter(ctx, a, param))
+	s.valuesLock.Lock()
+	for k, v := range result {
+		s.values[k] = v
 	}
-	args := types.WrapHash(entries)
+	s.valuesLock.Unlock()
 
-	result := a.Run(ctx, args).(px.OrderedMap)
-	if result != nil && result.Len() > 0 {
-		s.valuesLock.Lock()
-		result.EachPair(func(k, v px.Value) {
-			s.values[k.String()] = v
-		})
-		s.valuesLock.Unlock()
-	}
 	a.SetResolved()
 
 	// Schedule all steps that are dependent on this step. Since a node can be
@@ -467,6 +448,98 @@ func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 	for ni.Next() {
 		s.scheduleStep(ni.Node().(*serverStep))
 	}
+}
+
+var hasLocationPattern = regexp.MustCompile(`[^\w]file:\s+|[^\w]line:\s+`)
+
+func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns map[string]px.Value) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			var err error
+			var loc issue.Location
+			if orig := s.Origin(); orig != `` {
+				loc = issue.ParseLocation(orig)
+			}
+			switch r := r.(type) {
+			case issue.Reported:
+				if loc != nil {
+					r = r.WithLocation(loc)
+				}
+				err = r
+			case error:
+				if loc := s.Origin(); loc != `` {
+					es := r.Error()
+					if !hasLocationPattern.MatchString(es) {
+						r = fmt.Errorf(`%s %s`, es, loc)
+					}
+				}
+				err = r
+			case string:
+				if loc := s.Origin(); loc != `` {
+					err = fmt.Errorf(`%s %s`, r, loc)
+				} else {
+					err = errors.New(r)
+				}
+			case fmt.Stringer:
+				if loc := s.Origin(); loc != `` {
+					err = fmt.Errorf(`%s %s`, r.String(), loc)
+				} else {
+					err = errors.New(r.String())
+				}
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			if _, ok := err.(issue.Reported); !ok {
+				// Wrap in a step execution error so that step is revealed
+				err = issue.NewNested(StepExecutionError, issue.H{`step`: a}, loc, err)
+			}
+			s.runLatchLock.Lock()
+			if s.errors == nil {
+				s.errors = []error{err}
+			} else {
+				s.errors = append(s.errors, err)
+			}
+			s.runLatchLock.Unlock()
+			for _, p := range a.Returns() {
+				returns[p.Name()] = unresolvedValue
+			}
+		}
+	}()
+
+	returns = make(map[string]px.Value, len(a.Returns()))
+
+	s.waitForEdgesTo(a)
+
+	params := a.Parameters()
+	entries := make([]*types.HashEntry, len(params))
+	for i, param := range params {
+		pv := s.resolveParameter(ctx, a, param)
+		if pv == unresolvedValue {
+			// This step cannot run so the returned values are all unresolved
+			hclog.Default().Info(`skipping step because of earlier errors`, `name`, a.Label())
+			for _, p := range a.Returns() {
+				returns[p.Name()] = unresolvedValue
+			}
+			return
+		}
+		entries[i] = types.WrapHashEntry2(param.Name(), pv)
+	}
+
+	// Run the step
+	r := a.Run(ctx, types.WrapHash(entries)).(px.OrderedMap)
+	if r == nil {
+		r = px.EmptyMap
+	}
+	for _, p := range a.Returns() {
+		n := p.Name()
+		if v, ok := r.Get4(n); ok {
+			returns[n] = v
+		} else {
+			panic(px.Error(ExpectedValueNotProduced, issue.H{`step`: a, `value`: n}))
+		}
+	}
+	return
 }
 
 func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param px.Parameter) px.Value {

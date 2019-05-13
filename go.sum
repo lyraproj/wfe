@@ -37,6 +37,10 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/thallgren/issue v0.0.0-20190512160618-668e97752cb0 h1:H+BuJ0XY8YO8DHe08H8gdduqFhNfFthb/kW0J+Ocf9U=
+github.com/thallgren/issue v0.0.0-20190512160618-668e97752cb0/go.mod h1:jqRRmAiVqjTehhncbKJPoC2AFoxxkritzzlfWioTa00=
+github.com/thallgren/servicesdk v0.0.0-20190513075437-38570cba00d4 h1:DokXqL0wBscIob1ZBzpEAgGsjkMmEpRVnUbceAxPjzM=
+github.com/thallgren/servicesdk v0.0.0-20190513075437-38570cba00d4/go.mod h1:caJHr1z8z+68kA3IHjcq3MKKHP1uyVi3pIODy9+uFzQ=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 h1:y102fOLFqhV41b+4GPiJoa0k/x+pJcEi2/HB1Y5T6fU=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
