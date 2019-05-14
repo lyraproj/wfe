@@ -28,22 +28,17 @@ func (r *reference) Identifier() string {
 	return StepId(r)
 }
 
-func (r *reference) Parameters() []px.Parameter {
-	var input []px.Parameter
+func (r *reference) Parameters() []serviceapi.Parameter {
+	var input []serviceapi.Parameter
 	if len(r.parameters) == 0 {
 		input = r.ra.Parameters()
 	} else {
-		// Return a copy with the alias stripped of. Input parameters with values (alias is a value)
-		// doesn't pick up a new value from the workflow.
-		input = make([]px.Parameter, len(r.parameters))
-		for i, p := range r.parameters {
-			input[i] = px.NewParameter(p.Name(), p.Type(), nil, false)
-		}
+		input = r.parameters
 	}
 	return input
 }
 
-func (r *reference) Returns() []px.Parameter {
+func (r *reference) Returns() []serviceapi.Parameter {
 	output := r.returns
 	if len(output) == 0 {
 		output = r.ra.Returns()
@@ -64,7 +59,7 @@ func (r *reference) When() wf.Condition {
 }
 
 func (r *reference) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
-	return r.mapOutput(r.ra.Run(ctx, r.mapInput(input)))
+	return r.mapOutput(r.ra.Run(ctx, r.mapInput(ResolveParameters(ctx, r, input))))
 }
 
 func (r *reference) Label() string {
@@ -88,10 +83,8 @@ func (r *reference) mapInput(input px.OrderedMap) px.OrderedMap {
 		kn := key.String()
 		for _, p := range ips {
 			if p.Name() == kn {
-				if p.HasValue() {
-					if alias, ok := p.Value().(px.StringValue); ok {
-						entry = types.WrapHashEntry(alias, entry.Value())
-					}
+				if p.Alias() != `` {
+					entry = types.WrapHashEntry2(p.Alias(), entry.Value())
 				}
 				break
 			}
@@ -106,10 +99,10 @@ func (r *reference) mapOutput(output px.OrderedMap) px.OrderedMap {
 		return output
 	}
 	return output.MapEntries(func(entry px.MapEntry) px.MapEntry {
-		key := entry.Key()
+		key := entry.Key().String()
 		for _, p := range ops {
-			if p.HasValue() {
-				if alias, ok := p.Value().(px.StringValue); ok && alias.Equals(key, nil) {
+			if p.Alias() != `` {
+				if p.Alias() == key {
 					entry = types.WrapHashEntry2(p.Name(), entry.Value())
 					break
 				}

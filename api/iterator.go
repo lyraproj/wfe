@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
 )
 
@@ -20,5 +21,5 @@ type Iterator interface {
 	// Variables returns the variables that this iterator will produce for each iteration. These
 	// variables will be removed from the declared parameters set when the final requirements
 	// for the step are computed.
-	Variables() []px.Parameter
+	Variables() []serviceapi.Parameter
 }

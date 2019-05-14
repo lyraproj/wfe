@@ -17,6 +17,7 @@ import (
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
 	"github.com/lyraproj/wfe/api"
 	"github.com/lyraproj/wfe/service"
@@ -44,7 +45,7 @@ type serverStep struct {
 	resolved chan bool
 }
 
-func appendParameterNames(params []px.Parameter, b *bytes.Buffer) {
+func appendParameterNames(params []serviceapi.Parameter, b *bytes.Buffer) {
 	for i, p := range params {
 		if i > 0 {
 			b.WriteByte(',')
@@ -262,7 +263,7 @@ func (s *workflowEngine) Validate() {
 
 type valueProducers map[string][]api.Step
 
-func (vp valueProducers) add(a api.Step, ps []px.Parameter) {
+func (vp valueProducers) add(a api.Step, ps []serviceapi.Parameter) {
 	for _, param := range ps {
 		n := param.Name()
 		v := vp[n]
@@ -298,7 +299,7 @@ func (vp valueProducers) validateParameters(a api.Step) {
 		checkDep(name)
 	}
 	for _, param := range a.Parameters() {
-		if !param.HasValue() {
+		if param.Value() == nil {
 			checkDep(param.Name())
 		}
 	}
@@ -306,7 +307,7 @@ func (vp valueProducers) validateParameters(a api.Step) {
 
 func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	s.values = make(map[string]px.Value, 37)
-	parameters.EachPair(func(k, v px.Value) {
+	ResolveParameters(ctx, s.Workflow, parameters).EachPair(func(k, v px.Value) {
 		s.values[k.String()] = v
 	})
 
@@ -314,10 +315,6 @@ func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.Ordere
 	ni := s.graph.Nodes()
 	if ni == nil || ni.Len() == 0 {
 		return nil
-	}
-
-	for _, param := range s.Workflow.Parameters() {
-		s.values[param.Name()] = s.resolveParameter(ctx, s.Workflow, param)
 	}
 
 	for w := 1; w <= 5; w++ {
@@ -387,7 +384,7 @@ nextName:
 		addDeps(name)
 	}
 	for _, param := range a.Parameters() {
-		if !param.HasValue() {
+		if param.Value() == nil {
 			addDeps(param.Name())
 		}
 	}
@@ -542,9 +539,9 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 	return
 }
 
-func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param px.Parameter) px.Value {
+func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param serviceapi.Parameter) px.Value {
 	n := param.Name()
-	if !param.HasValue() {
+	if param.Value() == nil {
 		s.valuesLock.RLock()
 		v, ok := s.values[n]
 		s.valuesLock.RUnlock()

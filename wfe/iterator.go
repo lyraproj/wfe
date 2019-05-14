@@ -18,7 +18,7 @@ const maxParallel = 100
 type iterator struct {
 	api.Step
 	over       px.Value
-	variables  []px.Parameter
+	variables  []serviceapi.Parameter
 	resultName string
 }
 
@@ -63,9 +63,9 @@ func (it *iterator) Producer() api.Step {
 }
 
 // Parameters returns the Parameters declared for the stateHandler + Over() and - Variables
-func (it *iterator) Parameters() []px.Parameter {
+func (it *iterator) Parameters() []serviceapi.Parameter {
 	parameters := it.Producer().Parameters()
-	all := make([]px.Parameter, 0, len(parameters)-len(it.variables))
+	all := make([]serviceapi.Parameter, 0, len(parameters)-len(it.variables))
 nextParameters:
 	for _, in := range parameters {
 		for _, v := range it.variables {
@@ -78,14 +78,13 @@ nextParameters:
 	return all
 }
 
-// Returns returns one parameter named after the step. It is always an Array. Each
-// entry of that array is an element that reflects the returns from the iterated
-// step.
+// Returns returns one parameter. It is always an Array. Each entry of that array
+// is an element that reflects the returns from the iterated step.
 //
 // An step that only returns one element will produce an array of such elements
 // An step that produces multiple elements will produce an array where each
 // element is a hash
-func (it *iterator) Returns() []px.Parameter {
+func (it *iterator) Returns() []serviceapi.Parameter {
 	returns := it.Producer().Returns()
 	var vt px.Type
 	if len(returns) == 1 {
@@ -97,11 +96,11 @@ func (it *iterator) Returns() []px.Parameter {
 		}
 		vt = types.NewStructType(se)
 	}
-	return []px.Parameter{
-		px.NewParameter(it.resultName, types.NewArrayType(vt, nil), nil, false)}
+	return []serviceapi.Parameter{
+		serviceapi.NewParameter(it.resultName, ``, types.NewArrayType(vt, nil), nil)}
 }
 
-func (it *iterator) Variables() []px.Parameter {
+func (it *iterator) Variables() []serviceapi.Parameter {
 	return it.variables
 }
 
@@ -223,7 +222,7 @@ type each struct {
 	iterator
 }
 
-func NewEach(step api.Step, name string, over px.Value, variables []px.Parameter) api.Iterator {
+func NewEach(step api.Step, name string, over px.Value, variables []serviceapi.Parameter) api.Iterator {
 	it := &each{iterator{step, over, variables, name}}
 	Validate(it)
 	return it
@@ -295,7 +294,7 @@ type eachPair struct {
 	iterator
 }
 
-func NewEachPair(step api.Step, name string, over px.Value, variables []px.Parameter) api.Iterator {
+func NewEachPair(step api.Step, name string, over px.Value, variables []serviceapi.Parameter) api.Iterator {
 	it := &eachPair{iterator{step, over, variables, name}}
 	Validate(it)
 	return it
@@ -326,7 +325,7 @@ type times struct {
 	iterator
 }
 
-func NewTimes(step api.Step, name string, over px.Value, variables []px.Parameter) api.Iterator {
+func NewTimes(step api.Step, name string, over px.Value, variables []serviceapi.Parameter) api.Iterator {
 	it := &times{iterator{step, over, variables, name}}
 	Validate(it)
 	return it
@@ -355,7 +354,7 @@ type itRange struct {
 	iterator
 }
 
-func NewRange(step api.Step, name string, over px.Value, variables []px.Parameter) api.Iterator {
+func NewRange(step api.Step, name string, over px.Value, variables []serviceapi.Parameter) api.Iterator {
 	it := &itRange{iterator{step, over, variables, name}}
 	Validate(it)
 	return it

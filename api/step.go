@@ -3,6 +3,8 @@ package api
 import (
 	"net/url"
 
+	"github.com/lyraproj/servicesdk/serviceapi"
+
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/servicesdk/wf"
@@ -41,10 +43,10 @@ type Step interface {
 	Name() string
 
 	// Parameters returns the parameters requirements for the Step
-	Parameters() []px.Parameter
+	Parameters() []serviceapi.Parameter
 
 	// Returns returns the definition of that this Step will produce
-	Returns() []px.Parameter
+	Returns() []serviceapi.Parameter
 
 	// Run will execute this Step. The given parameters must match the declared Parameters. It will return
 	// a value that corresponds to the Returns declaration.

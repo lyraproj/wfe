@@ -21,8 +21,8 @@ github.com/lyraproj/data-protobuf v0.0.0-20190329160005-a909d9e1f93b h1:qGgMkFUQ
 github.com/lyraproj/data-protobuf v0.0.0-20190329160005-a909d9e1f93b/go.mod h1:oQIFBu0fmkiSpSRROEgK5gnjQ/ZDrx3UdpRpT3791Gg=
 github.com/lyraproj/issue v0.0.0-20190513084509-faf9b542f594 h1:IcsHRQ3xzCIcK0eXpot8IYgEyUQPEFHmFErZwJcsDqk=
 github.com/lyraproj/issue v0.0.0-20190513084509-faf9b542f594/go.mod h1:jqRRmAiVqjTehhncbKJPoC2AFoxxkritzzlfWioTa00=
-github.com/lyraproj/pcore v0.0.0-20190513110440-3136007d878d h1:UGQ37YS1mhNm2I4xutG+DaM+4P4x/TEdWpQk950eWaI=
-github.com/lyraproj/pcore v0.0.0-20190513110440-3136007d878d/go.mod h1:NGvVSNVj6tF0acszsfqcu+qtNt5b1hlSiiL3oNSuNMI=
+github.com/lyraproj/pcore v0.0.0-20190514082225-61649d71c936 h1:oEI8jC1efmrpvMBe0ndLy9RVadxOwv8iYNV/FENemRA=
+github.com/lyraproj/pcore v0.0.0-20190514082225-61649d71c936/go.mod h1:NGvVSNVj6tF0acszsfqcu+qtNt5b1hlSiiL3oNSuNMI=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
 github.com/lyraproj/servicesdk v0.0.0-20190513111104-a5b399ba7e1d h1:Tcb024zLxFytOAbrPYK6Tbw6i+H5weljUWP8TRU8vOA=
@@ -37,8 +37,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/thallgren/servicesdk v0.0.0-20190513140042-a5b6688bf356 h1:IpB8ZF9XDcEUngVOUw5N9tZh+kSZaaQG4VXa4s5i1aw=
-github.com/thallgren/servicesdk v0.0.0-20190513140042-a5b6688bf356/go.mod h1:uT1n4KLYr5P04yOs4gO6zP4UkjXhUG46bvHhrgt8zfI=
+github.com/thallgren/servicesdk v0.0.0-20190514125406-2af500baae27 h1:h3UPZ9axZWiZlHd/5YfSFHwViahz5iv7zw8ZbGkW91Y=
+github.com/thallgren/servicesdk v0.0.0-20190514125406-2af500baae27/go.mod h1:8qbDlTKcDFzE+pHn2ZhQrXX3lh2ChiJb9aq9pZHmg70=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 h1:y102fOLFqhV41b+4GPiJoa0k/x+pJcEi2/HB1Y5T6fU=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=

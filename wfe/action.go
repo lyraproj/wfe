@@ -3,6 +3,7 @@ package wfe
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/wfe/api"
 )
@@ -37,6 +38,9 @@ func (s *action) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	result := service.Invoke(ctx, s.Name(), `do`, parameters)
 	if m, ok := result.(px.OrderedMap); ok {
 		return m
+	}
+	if _, ok := result.(*types.UndefValue); ok {
+		return px.EmptyMap
 	}
 	panic(result.String())
 }

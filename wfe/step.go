@@ -22,8 +22,8 @@ type Step struct {
 	name       string
 	origin     string
 	when       wf.Condition
-	parameters []px.Parameter
-	returns    []px.Parameter
+	parameters []serviceapi.Parameter
+	returns    []serviceapi.Parameter
 	index      int
 }
 
@@ -85,11 +85,11 @@ func (a *Step) Name() string {
 	return a.name
 }
 
-func (a *Step) Parameters() []px.Parameter {
+func (a *Step) Parameters() []serviceapi.Parameter {
 	return a.parameters
 }
 
-func (a *Step) Returns() []px.Parameter {
+func (a *Step) Returns() []serviceapi.Parameter {
 	return a.returns
 }
 
@@ -110,14 +110,14 @@ func (a *Step) Init(def serviceapi.Definition) {
 	}
 }
 
-func getParameters(key string, props px.OrderedMap) []px.Parameter {
+func getParameters(key string, props px.OrderedMap) []serviceapi.Parameter {
 	if parameters, ok := props.Get4(key); ok {
 		ia := parameters.(px.List)
-		is := make([]px.Parameter, ia.Len())
-		ia.EachWithIndex(func(iv px.Value, idx int) { is[idx] = iv.(px.Parameter) })
+		is := make([]serviceapi.Parameter, ia.Len())
+		ia.EachWithIndex(func(iv px.Value, idx int) { is[idx] = iv.(serviceapi.Parameter) })
 		return is
 	}
-	return []px.Parameter{}
+	return []serviceapi.Parameter{}
 }
 
 func (a *Step) IdParams() url.Values {
@@ -127,14 +127,20 @@ func (a *Step) IdParams() url.Values {
 	return url.Values{}
 }
 
-func ResolveParameters(ctx px.Context, a api.Step, parameters px.OrderedMap, p px.Parameter) px.Value {
-	if !p.HasValue() {
-		if v, ok := parameters.Get4(p.Name()); ok {
-			return v
+func ResolveParameters(ctx px.Context, a api.Step, parameters px.OrderedMap) px.OrderedMap {
+	ps := a.Parameters()
+	ne := make([]*types.HashEntry, len(ps))
+	for i, p := range ps {
+		v, ok := parameters.Get4(p.Name())
+		if !ok {
+			v = p.Value()
+			if v == nil {
+				panic(px.Error(ParameterUnresolved, issue.H{`step`: a, `parameter`: p.Name()}))
+			}
 		}
-		panic(px.Error(ParameterUnresolved, issue.H{`step`: a, `parameter`: p.Name()}))
+		ne[i] = types.WrapHashEntry2(p.Name(), v)
 	}
-	return types.ResolveDeferred(ctx, p.Value(), parameters)
+	return types.ResolveDeferred(ctx, types.WrapHash(ne), parameters).(px.OrderedMap)
 }
 
 // setIndex must only be called after a direct cloning operation on the instance, i.e. from WithIndex()
