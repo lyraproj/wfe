@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
@@ -184,28 +186,25 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 	return px.EmptyMap
 }
 
-func getValue(p px.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntry {
+func getValue(p serviceapi.Parameter, r api.Resource, o px.PuppetObject) *types.HashEntry {
 	n := p.Name()
 	a := n
-	if p.HasValue() {
-		v := p.Value()
-		if a, ok := v.(*types.Array); ok {
+	v := p.Alias()
+	if v != `` {
+		vs := strings.Split(v, `,`)
+		if len(vs) > 1 {
 			// Build hash from multiple attributes
-			entries := make([]*types.HashEntry, a.Len())
-			a.EachWithIndex(func(e px.Value, i int) {
-				a := e.String()
+			entries := make([]*types.HashEntry, len(vs))
+			for i, a := range vs {
 				if v, ok := o.Get(a); ok {
-					entries[i] = types.WrapHashEntry(e, v)
+					entries[i] = types.WrapHashEntry2(a, v)
 				} else {
 					panic(px.Error(api.NoSuchAttribute, issue.H{`step`: r, `name`: a}))
 				}
-			})
+			}
 			return types.WrapHashEntry2(n, types.WrapHash(entries))
 		}
-
-		if s, ok := v.(px.StringValue); ok {
-			a = s.String()
-		}
+		a = v
 	}
 	if v, ok := o.Get(a); ok {
 		return types.WrapHashEntry2(n, v)
