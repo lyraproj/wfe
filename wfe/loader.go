@@ -76,8 +76,18 @@ func newYamlManifestPath(ml px.ModuleLoader, moduleNameRelative bool) loader.Sma
 }
 
 func instantiateYaml(c px.Context, l loader.ContentProvidingLoader, tn px.TypedName, sources []string) {
-	// No actual difference until the plugins puppet-workflow and yaml-workflow become separated
-	instantiatePp(c, l, tn, sources)
+	yamlServer := wfs.GetService(c, px.NewTypedName(px.NsService, `Yaml`))
+	lg := hclog.Default()
+	f := sources[0]
+	lg.Debug("loading manifest", "file", f)
+	def := yamlServer.Invoke(
+		c, `Yaml::ManifestLoader`, `loadManifest`,
+		types.WrapString(filepath.Dir(filepath.Dir(f))), // Search for 'workflows/../types'
+		types.WrapString(f)).(serviceapi.Definition)
+	sa := service.NewSubService(def)
+	dl := l.(px.DefiningLoader)
+	dl.SetEntry(sa.Identifier(c), px.NewLoaderEntry(sa, nil))
+	loadMetadata(c, dl, ``, nil, sa)
 }
 
 func newPpManifestPath(ml px.ModuleLoader, moduleNameRelative bool) loader.SmartPath {
