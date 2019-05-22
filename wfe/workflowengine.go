@@ -449,6 +449,18 @@ func (s *workflowEngine) runStep(ctx px.Context, a *serverStep) {
 
 var hasLocationPattern = regexp.MustCompile(`[^\w]file:\s+|[^\w]line:\s+`)
 
+type parameterScope struct {
+	parent px.Keyed
+	params map[string]px.Value
+}
+
+func (ps *parameterScope) Get(key px.Value) (px.Value, bool) {
+	if v, ok := ps.params[key.String()]; ok {
+		return v, true
+	}
+	return ps.parent.Get(key)
+}
+
 func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns map[string]px.Value) {
 	defer func() {
 		r := recover()
@@ -509,9 +521,10 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 	s.waitForEdgesTo(a)
 
 	params := a.Parameters()
+	scope := &parameterScope{ctx.Scope(), make(map[string]px.Value, len(params))}
 	entries := make([]*types.HashEntry, len(params))
 	for i, param := range params {
-		pv := s.resolveParameter(ctx, a, param)
+		pv := s.resolveParameter(ctx, a, param, scope)
 		if pv == unresolvedValue {
 			// This step cannot run so the returned values are all unresolved
 			hclog.Default().Info(`skipping step because of earlier errors`, `name`, a.Label())
@@ -520,6 +533,7 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 			}
 			return
 		}
+		scope.params[param.Name()] = pv
 		entries[i] = types.WrapHashEntry2(param.Name(), pv)
 	}
 
@@ -539,7 +553,7 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 	return
 }
 
-func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param serviceapi.Parameter) px.Value {
+func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param serviceapi.Parameter, scope px.Keyed) px.Value {
 	n := param.Name()
 	if param.Value() == nil {
 		s.valuesLock.RLock()
@@ -550,7 +564,7 @@ func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param s
 		}
 		panic(px.Error(NoProducerOfValue, issue.H{`step`: step, `value`: n}))
 	}
-	return types.ResolveDeferred(ctx, param.Value(), ctx.Scope())
+	return types.ResolveDeferred(ctx, param.Value(), scope)
 }
 
 // Ensure that all nodes that has an edge to this node have been
