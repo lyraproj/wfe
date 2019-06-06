@@ -54,11 +54,13 @@ func SweepAndGC(c px.Context, prefix string) {
 func readOrNotFound(c px.Context, handler serviceapi.Service, hn string, extId px.Value, identity *identity) px.Value {
 	defer func() {
 		if r := recover(); r != nil {
-			if e, ok := r.(issue.Reported); ok && e.Code() == service.NotFound {
-				// Not found by remote. Purge the extId and return nil.
-				hclog.Default().Debug("Removing obsolete extId from Identity service", "extId", extId)
-				identity.purgeExternal(c, extId)
-				return
+			if e, ok := r.(issue.Reported); ok {
+				if e, ok = e.Cause().(issue.Reported); ok && e.Code() == service.NotFound {
+					// Not found by remote. Purge the extId and return nil.
+					hclog.Default().Debug("Removing obsolete extId from Identity service", "extId", extId)
+					identity.purgeExternal(c, extId)
+					return
+				}
 			}
 			panic(r)
 		}
