@@ -282,6 +282,9 @@ func (vp valueProducers) validate(a api.Step) {
 		}
 	}
 	for _, param := range a.Returns() {
+		if param.Value() != nil {
+			continue
+		}
 		if _, found := vp[param.Name()]; found {
 			continue
 		}
