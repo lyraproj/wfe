@@ -316,29 +316,27 @@ func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.Ordere
 
 	// Run all nodes that can run, i.e. root nodes
 	ni := s.graph.Nodes()
-	if ni == nil || ni.Len() == 0 {
-		return nil
-	}
-
-	for w := 1; w <= 5; w++ {
-		px.Fork(ctx, func(cf px.Context) { s.stepWorker(cf, w) })
-	}
-	for ni.Next() {
-		n := ni.Node()
-		if s.graph.To(n.ID()).Len() == 0 {
-			s.scheduleStep(n.(*serverStep))
+	if ni != nil && ni.Len() > 0 {
+		for w := 1; w <= 5; w++ {
+			px.Fork(ctx, func(cf px.Context) { s.stepWorker(cf, w) })
 		}
-	}
-	<-s.done
-
-	if s.errors != nil {
-		var err error
-		if len(s.errors) == 1 {
-			err = s.errors[0]
-		} else {
-			err = px.Error(api.MultipleErrors, issue.H{`errors`: s.errors})
+		for ni.Next() {
+			n := ni.Node()
+			if s.graph.To(n.ID()).Len() == 0 {
+				s.scheduleStep(n.(*serverStep))
+			}
 		}
-		panic(err)
+		<-s.done
+
+		if s.errors != nil {
+			var err error
+			if len(s.errors) == 1 {
+				err = s.errors[0]
+			} else {
+				err = px.Error(api.MultipleErrors, issue.H{`errors`: s.errors})
+			}
+			panic(err)
+		}
 	}
 
 	entries := make([]*types.HashEntry, 0, len(s.Returns()))
