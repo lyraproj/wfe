@@ -19,18 +19,22 @@ type commandType int
 
 const (
 	startEra = commandType(iota)
+	addRef
 
 	gcKey = `Lyra::Deferred::IdentityService`
 )
 
 type command struct {
-	t commandType
+	t    commandType
+	args []px.Value
 }
 
 func (cmd *command) apply(c px.Context, is *identity) {
 	switch cmd.t {
 	case startEra:
 		is.bumpEra(c)
+	case addRef:
+		is.addReference(c, cmd.args[0], cmd.args[1])
 	}
 }
 
@@ -55,7 +59,7 @@ func GetLazyIdentity(c px.Context) (li *LazyIdentity) {
 
 func (gc *LazyIdentity) StartEra(c px.Context) {
 	if gc.service == nil {
-		gc.deferredCommands = append(gc.deferredCommands, &command{startEra})
+		gc.deferredCommands = append(gc.deferredCommands, &command{startEra, nil})
 	} else {
 		gc.service.bumpEra(c)
 	}
@@ -93,6 +97,9 @@ func (gc *LazyIdentity) SweepAndGC(c px.Context, prefix string) {
 	for _, l := range rs {
 		uri := types.ParseURI(l.At(0).String())
 		hid := uri.Query().Get(`hid`)
+		if hid == `` {
+			continue
+		}
 		handlerDef := GetHandler(c, px.NewTypedName(px.NsHandler, hid))
 		handler := GetService(c, handlerDef.ServiceId())
 
@@ -100,6 +107,17 @@ func (gc *LazyIdentity) SweepAndGC(c px.Context, prefix string) {
 		log.Debug("LazyIdentity delete", "prefix", prefix, "intId", uri.String(), "extId", extId)
 		handler.Invoke(c, handlerDef.Identifier().Name(), `delete`, extId)
 		identity.purgeExternal(c, extId)
+	}
+	identity.purgeReferences(c, prefix)
+}
+
+func (gc *LazyIdentity) AddReference(c px.Context, internalId, otherId string) {
+	iv := types.WrapString(internalId)
+	ov := types.WrapString(otherId)
+	if gc.service == nil {
+		gc.deferredCommands = append(gc.deferredCommands, &command{addRef, []px.Value{iv, ov}})
+	} else {
+		gc.service.addReference(c, iv, ov)
 	}
 }
 
