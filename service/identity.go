@@ -17,6 +17,10 @@ func (i *identity) associate(c px.Context, internalID, externalID px.Value) {
 	i.invokable.Invoke(c, i.id, `associate`, internalID, externalID)
 }
 
+func (i *identity) addReference(c px.Context, internalID, otherID px.Value) {
+	i.invokable.Invoke(c, i.id, `addReference`, internalID, otherID)
+}
+
 func (i *identity) bumpEra(c px.Context) {
 	i.invokable.Invoke(c, i.id, `bumpEra`)
 }
@@ -46,6 +50,10 @@ func (i *identity) sweep(c px.Context, prefix string) {
 
 func (i *identity) purgeExternal(c px.Context, externalID px.Value) {
 	i.invokable.Invoke(c, i.id, `purgeExternal`, externalID)
+}
+
+func (i *identity) purgeReferences(c px.Context, prefix string) {
+	i.invokable.Invoke(c, i.id, `purgeReferences`, types.WrapString(prefix))
 }
 
 func (i *identity) removeExternal(c px.Context, externalID px.Value) {

@@ -63,6 +63,7 @@ func (r *call) When() wf.Condition {
 }
 
 func (r *call) Run(ctx px.Context, input px.OrderedMap) px.OrderedMap {
+	service.GetLazyIdentity(ctx).AddReference(ctx, r.Identifier(), r.ra.Identifier())
 	return r.mapOutput(r.ra.Run(ctx, r.mapInput(ResolveParameters(ctx, r, input))))
 }
 
