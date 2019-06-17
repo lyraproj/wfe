@@ -232,14 +232,14 @@ func ApplyState(c px.Context, resource api.Resource, parameters px.OrderedMap) p
 			break
 		}
 
-		var updateNeeded, recreateNeeded bool
+		var ra annotation.Resource
 		if a, ok := resource.Type().Annotations(c).Get(annotation.ResourceType); ok {
-			ra := a.(annotation.Resource)
-			updateNeeded, recreateNeeded = ra.Changed(c, desiredState, result)
+			ra = a.(annotation.Resource)
 		} else {
-			updateNeeded = !desiredState.Equals(result, nil)
-			recreateNeeded = false
+			log.Debug("Using default Resource annotation", "resource", resource.Type().Name())
+			ra = annotation.DefaultResource()
 		}
+		updateNeeded, recreateNeeded := ra.Changed(c, desiredState, result)
 
 		if updateNeeded {
 			if !recreateNeeded {
