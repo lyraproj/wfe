@@ -1,4 +1,4 @@
-package wfe
+package internal
 
 import (
 	"github.com/lyraproj/issue/issue"
@@ -6,30 +6,29 @@ import (
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
-	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/wfe/service"
+	"github.com/lyraproj/wfe/wfe"
 )
 
 type stateHandler struct {
-	Step
+	step
 	typ px.ObjectType
 }
 
-func StateHandler(def serviceapi.Definition) api.Step {
+func newStateHandler(def serviceapi.Definition) wfe.Step {
 	a := &stateHandler{}
-	a.Init(def)
+	a.initStep(def)
 	return a
 }
 
-func (a *stateHandler) Init(def serviceapi.Definition) {
-	a.Step.Init(def)
+func (a *stateHandler) initStep(def serviceapi.Definition) {
+	a.step.initStep(def)
 	// TODO: Type validation. The typ must be an ObjectType implementing read, upsert, and delete.
-	a.typ = service.GetProperty(def, `interface`, types.NewTypeType(types.DefaultObjectType())).(px.ObjectType)
+	a.typ = wfe.GetProperty(def, `interface`, types.NewTypeType(types.DefaultObjectType())).(px.ObjectType)
 }
 
 func (a *stateHandler) Run(c px.Context, parameters px.OrderedMap) px.OrderedMap {
-	ac := service.StepContext(c)
-	op := service.GetOperation(ac)
+	ac := wfe.StepContext(c)
+	op := wfe.GetOperation(ac)
 	invokable := a.GetService(c)
 
 	switch op {
@@ -59,7 +58,7 @@ func (a *stateHandler) Style() string {
 	return `stateHandler`
 }
 
-func (a *stateHandler) WithIndex(index int) api.Step {
+func (a *stateHandler) WithIndex(index int) wfe.Step {
 	ac := stateHandler{}
 	ac = *a // Copy by value
 	ac.setIndex(index)

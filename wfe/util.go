@@ -1,4 +1,4 @@
-package service
+package wfe
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
-	"github.com/lyraproj/wfe/api"
 )
 
 const StepContextKey = `step::context`
@@ -18,7 +17,7 @@ func StepContext(c px.Context) px.OrderedMap {
 	if ac, ok := c.Get(StepContextKey); ok {
 		return px.AssertInstance(`invalid step context`, types.DefaultHashType(), ac.(px.Value)).(px.OrderedMap)
 	}
-	panic(px.Error(api.NoStepContext, issue.NoArgs))
+	panic(px.Error(NoStepContext, issue.NoArgs))
 }
 
 func GetOperation(ac px.OrderedMap) wf.Operation {
@@ -34,7 +33,7 @@ func GetService(c px.Context, serviceId px.TypedName) serviceapi.Service {
 			return sm.(serviceapi.Service)
 		}
 	}
-	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsService), `name`: serviceId.String()}))
+	panic(px.Error(UnableToLoadRequired, issue.H{`namespace`: string(px.NsService), `name`: serviceId.String()}))
 }
 
 func GetDefinition(c px.Context, definitionId px.TypedName) serviceapi.Definition {
@@ -43,7 +42,7 @@ func GetDefinition(c px.Context, definitionId px.TypedName) serviceapi.Definitio
 			return sm.(serviceapi.Definition)
 		}
 	}
-	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsDefinition), `name`: definitionId.String()}))
+	panic(px.Error(UnableToLoadRequired, issue.H{`namespace`: string(px.NsDefinition), `name`: definitionId.String()}))
 }
 
 func GetHandler(c px.Context, handlerId px.TypedName) serviceapi.Definition {
@@ -52,7 +51,7 @@ func GetHandler(c px.Context, handlerId px.TypedName) serviceapi.Definition {
 			return sm.(serviceapi.Definition)
 		}
 	}
-	panic(px.Error(api.UnableToLoadRequired, issue.H{`namespace`: string(px.NsHandler), `name`: handlerId.String()}))
+	panic(px.Error(UnableToLoadRequired, issue.H{`namespace`: string(px.NsHandler), `name`: handlerId.String()}))
 }
 
 func GetStringProperty(def serviceapi.Definition, key string) string {
@@ -65,7 +64,7 @@ func GetProperty(def serviceapi.Definition, key string, typ px.Type) px.Value {
 			return fmt.Sprintf(`%s %s, property %s`, def.ServiceId(), def.Identifier(), key)
 		}, typ, prop)
 	}
-	panic(px.Error(api.MissingRequiredProperty, issue.H{`service`: def.ServiceId(), `definition`: def.Identifier(), `key`: key}))
+	panic(px.Error(MissingRequiredProperty, issue.H{`service`: def.ServiceId(), `definition`: def.Identifier(), `key`: key}))
 }
 
 func GetOptionalProperty(def serviceapi.Definition, key string, typ px.Type) (px.Value, bool) {
