@@ -1,4 +1,4 @@
-package wfe
+package internal
 
 import (
 	"bytes"
@@ -13,14 +13,12 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
-	"github.com/lyraproj/wfe/api"
-	"github.com/lyraproj/wfe/service"
+	"github.com/lyraproj/wfe/wfe"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
@@ -40,7 +38,7 @@ type WorkflowEngine interface {
 }
 
 type serverStep struct {
-	api.Step
+	wfe.Step
 	graph.Node
 	resolved chan bool
 }
@@ -56,7 +54,7 @@ func appendParameterNames(params []serviceapi.Parameter, b *bytes.Buffer) {
 
 func (a *serverStep) Attributes() []encoding.Attribute {
 	b := bytes.NewBufferString(`"`)
-	b.WriteString(service.LeafName(a.Name()))
+	b.WriteString(wfe.LeafName(a.Name()))
 	b.WriteByte('{')
 	b.WriteString("\nparameters:[")
 	appendParameterNames(a.Parameters(), b)
@@ -67,7 +65,7 @@ func (a *serverStep) Attributes() []encoding.Attribute {
 }
 
 func (a *serverStep) DOTID() string {
-	return service.LeafName(a.Name())
+	return wfe.LeafName(a.Name())
 }
 
 func (a *serverStep) SetResolved() {
@@ -79,7 +77,7 @@ func (a *serverStep) Resolved() <-chan bool {
 }
 
 type workflowEngine struct {
-	api.Workflow
+	wfe.Workflow
 	runLatchLock sync.Mutex
 	valuesLock   sync.RWMutex
 	runLatch     map[int64]bool
@@ -91,7 +89,7 @@ type workflowEngine struct {
 	errors       []error
 }
 
-func NewWorkflowEngine(workflow api.Workflow) WorkflowEngine {
+func newWorkflowEngine(workflow wfe.Workflow) WorkflowEngine {
 	as := &workflowEngine{
 		Workflow: workflow,
 		runLatch: make(map[int64]bool),
@@ -105,14 +103,14 @@ func NewWorkflowEngine(workflow api.Workflow) WorkflowEngine {
 	return as
 }
 
-func (s *workflowEngine) addStep(na api.Step) {
+func (s *workflowEngine) addStep(na wfe.Step) {
 	// Check that no other step is a producer of the same values
 	ni := s.graph.Nodes()
 	if ni != nil {
 		for ni.Next() {
-			a := ni.Node().(api.Step)
+			a := ni.Node().(wfe.Step)
 			if a.Name() == na.Name() {
-				panic(px.Error(AlreadyDefined, issue.H{`name`: na.Name()}))
+				panic(px.Error(wfe.AlreadyDefined, issue.H{`name`: na.Name()}))
 			}
 		}
 	}
@@ -127,7 +125,7 @@ const maxGuards = 8
 func (s *workflowEngine) GraphAsDot() []byte {
 	de, err := dot.Marshal(s.graph, s.Name(), ``, `  `)
 	if err != nil {
-		panic(px.Error(GraphDotMarshal, issue.H{`detail`: err.Error()}))
+		panic(px.Error(wfe.GraphDotMarshal, issue.H{`detail`: err.Error()}))
 	}
 	return de
 }
@@ -186,7 +184,7 @@ func (s *workflowEngine) Validate() {
 	if gc > 0 {
 		maxVariations := int(math.Pow(2.0, float64(gc)))
 		if gc > maxGuards {
-			panic(px.Error(TooManyGuards, issue.H{`step`: s, `max`: maxGuards, `count`: gc}))
+			panic(px.Error(wfe.TooManyGuards, issue.H{`step`: s, `max`: maxGuards, `count`: gc}))
 		}
 
 		guardNames := make([]string, 0, gc)
@@ -261,24 +259,24 @@ func (s *workflowEngine) Validate() {
 	}
 }
 
-type valueProducers map[string][]api.Step
+type valueProducers map[string][]wfe.Step
 
-func (vp valueProducers) add(a api.Step, ps []serviceapi.Parameter) {
+func (vp valueProducers) add(a wfe.Step, ps []serviceapi.Parameter) {
 	for _, param := range ps {
 		n := param.Name()
 		v := vp[n]
 		if v == nil {
-			vp[n] = []api.Step{a}
+			vp[n] = []wfe.Step{a}
 		} else {
 			vp[n] = append(v, a)
 		}
 	}
 }
 
-func (vp valueProducers) validate(a api.Step) {
+func (vp valueProducers) validate(a wfe.Step) {
 	for k, v := range vp {
 		if len(v) > 1 {
-			panic(px.Error(MultipleProducersOfValue, issue.H{`step1`: v[0], `step2`: v[1], `value`: k}))
+			panic(px.Error(wfe.MultipleProducersOfValue, issue.H{`step1`: v[0], `step2`: v[1], `value`: k}))
 		}
 	}
 	for _, param := range a.Returns() {
@@ -288,14 +286,14 @@ func (vp valueProducers) validate(a api.Step) {
 		if _, found := vp[param.Name()]; found {
 			continue
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: param.Name()}))
+		panic(px.Error(wfe.NoProducerOfValue, issue.H{`step`: a, `value`: param.Name()}))
 	}
 }
 
-func (vp valueProducers) validateParameters(a api.Step) {
+func (vp valueProducers) validateParameters(a wfe.Step) {
 	var checkDep = func(name string) {
 		if _, found := vp[name]; !found {
-			panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: name}))
+			panic(px.Error(wfe.NoProducerOfValue, issue.H{`step`: a, `value`: name}))
 		}
 	}
 	for _, name := range a.When().Names() {
@@ -310,7 +308,7 @@ func (vp valueProducers) validateParameters(a api.Step) {
 
 func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.OrderedMap {
 	s.values = make(map[string]px.Value, 37)
-	ResolveParameters(ctx, s.Workflow, parameters).EachPair(func(k, v px.Value) {
+	resolveParameters(ctx, s.Workflow, parameters).EachPair(func(k, v px.Value) {
 		s.values[k.String()] = v
 	})
 
@@ -333,7 +331,7 @@ func (s *workflowEngine) Run(ctx px.Context, parameters px.OrderedMap) px.Ordere
 			if len(s.errors) == 1 {
 				err = s.errors[0]
 			} else {
-				err = px.Error(api.MultipleErrors, issue.H{`errors`: s.errors})
+				err = px.Error(wfe.MultipleErrors, issue.H{`errors`: s.errors})
 			}
 			panic(err)
 		}
@@ -360,9 +358,9 @@ func (s *workflowEngine) DumpVariables() {
 	}
 }
 
-func (s *workflowEngine) dependents(a api.Step, vp valueProducers) []api.Step {
+func (s *workflowEngine) dependents(a wfe.Step, vp valueProducers) []wfe.Step {
 
-	dam := make(map[string]api.Step)
+	dam := make(map[string]wfe.Step)
 	var addDeps = func(name string) {
 		if ds, found := vp[name]; found {
 			for _, d := range ds {
@@ -372,7 +370,7 @@ func (s *workflowEngine) dependents(a api.Step, vp valueProducers) []api.Step {
 			}
 			return
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`step`: a, `value`: name}))
+		panic(px.Error(wfe.NoProducerOfValue, issue.H{`step`: a, `value`: name}))
 	}
 
 nextName:
@@ -390,7 +388,7 @@ nextName:
 		}
 	}
 
-	da := make([]api.Step, 0, len(dam))
+	da := make([]wfe.Step, 0, len(dam))
 	for _, vp := range dam {
 		da = append(da, vp)
 	}
@@ -502,7 +500,7 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 			}
 			if _, ok := err.(issue.Reported); !ok {
 				// Wrap in a step execution error so that step is revealed
-				err = issue.NewNested(StepExecutionError, issue.H{`step`: a}, loc, err)
+				err = issue.NewNested(wfe.StepExecutionError, issue.H{`step`: a}, loc, err)
 			}
 			s.runLatchLock.Lock()
 			if s.errors == nil {
@@ -548,13 +546,13 @@ func (s *workflowEngine) runStepCatch(ctx px.Context, a *serverStep) (returns ma
 		if v, ok := r.Get4(n); ok {
 			returns[n] = v
 		} else {
-			panic(px.Error(ExpectedValueNotProduced, issue.H{`step`: a, `value`: n}))
+			panic(px.Error(wfe.ExpectedValueNotProduced, issue.H{`step`: a, `value`: n}))
 		}
 	}
 	return
 }
 
-func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param serviceapi.Parameter, scope px.Keyed) px.Value {
+func (s *workflowEngine) resolveParameter(ctx px.Context, step wfe.Step, param serviceapi.Parameter, scope px.Keyed) px.Value {
 	n := param.Name()
 	if param.Value() == nil {
 		s.valuesLock.RLock()
@@ -563,7 +561,7 @@ func (s *workflowEngine) resolveParameter(ctx px.Context, step api.Step, param s
 		if ok {
 			return v
 		}
-		panic(px.Error(NoProducerOfValue, issue.H{`step`: step, `value`: n}))
+		panic(px.Error(wfe.NoProducerOfValue, issue.H{`step`: step, `value`: n}))
 	}
 	return types.ResolveDeferred(ctx, param.Value(), scope)
 }
